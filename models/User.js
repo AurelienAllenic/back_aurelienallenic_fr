@@ -40,13 +40,13 @@ const UserAurelienSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-UserSchema.pre("save", async function (next) {
+UserAurelienSchema .pre("save", async function (next) {
   if (!this.isModified("password") || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
-UserSchema.methods.comparePassword = async function (password) {
+UserAurelienSchema .methods.comparePassword = async function (password) {
   if (!this.password) return false;
   return await bcrypt.compare(password, this.password);
 };
@@ -82,8 +82,8 @@ const getUserModel = async () => {
     throw new Error("Connexion MongoDB non disponible");
   }
 
-  if (connection.models.User) {
-    return connection.models.User;
+  if (connection.models.UserAurelien) {
+    return connection.models.UserAurelien;
   }
 
   return connection.model("UserAurelien", UserAurelienSchema, "useraureliens");
