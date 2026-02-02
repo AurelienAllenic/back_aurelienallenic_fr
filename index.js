@@ -19,7 +19,6 @@ connectDB();
 
 app.set("trust proxy", 1);
 app.use(corsConfig);
-app.options("/(.*)", corsConfig);
 app.use((req, res, next) => {
   if (req.method === "OPTIONS") return next();
   return limiter(req, res, next);
