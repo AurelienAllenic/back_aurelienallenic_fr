@@ -7,7 +7,9 @@ const { uploadCvFields } = require("../middlewares/multer");
 const messageController = require("../controllers/messageController")
 
 router.post("/contact", contactController.handleContact);
-router.get("/messages", authController.requireAuth, messageController.findAllMessages); 
+router.get("/messages", authController.requireAuth, messageController.findAllMessages);
+router.get("/message/:id", authController.requireAuth, messageController.findOneMessage);
+router.delete("/message/:id", authController.requireAuth, messageController.deleteMessage)
 
 router.get("/cv", cvController.getCv);
 router.put(
