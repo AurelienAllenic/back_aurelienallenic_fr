@@ -8,8 +8,8 @@ const messageController = require("../controllers/messageController")
 
 router.post("/contact", contactController.handleContact);
 router.get("/messages", authController.requireAuth, messageController.findAllMessages);
-router.get("/message/:id", authController.requireAuth, messageController.findOneMessage);
-router.delete("/message/:id", authController.requireAuth, messageController.deleteMessage)
+router.get("/messages/:id", authController.requireAuth, messageController.findOneMessage);
+router.delete("/messages/:id", authController.requireAuth, messageController.deleteMessage)
 
 router.get("/cv", cvController.getCv);
 router.put(
