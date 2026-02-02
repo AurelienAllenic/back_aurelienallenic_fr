@@ -31,7 +31,10 @@ function decrypt(encryptedText) {
   if (encryptedText == null || encryptedText === "") return encryptedText;
   try {
     const parts = encryptedText.split(":");
-    if (parts.length !== 3) return encryptedText;
+    if (parts.length !== 3) {
+      console.error(`❌ [Decrypt] Format invalide: ${parts.length} parties au lieu de 3`);
+      return encryptedText;
+    }
     const key = getKey();
     const iv = Buffer.from(parts[0], "base64");
     const authTag = Buffer.from(parts[1], "base64");
@@ -40,8 +43,11 @@ function decrypt(encryptedText) {
     decipher.setAuthTag(authTag);
     let decrypted = decipher.update(encrypted, "base64", "utf8");
     decrypted += decipher.final("utf8");
+    console.log('✅ [Decrypt] Déchiffrement réussi');
     return decrypted;
   } catch (err) {
+    console.error('❌ [Decrypt] Erreur:', err.message);
+    console.error('❌ [Decrypt] Texte chiffré:', encryptedText.substring(0, 50) + '...');
     return encryptedText;
   }
 }
