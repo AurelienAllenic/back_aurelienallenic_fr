@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const { getConnection, connectDB } = require("../config/db");
 const bcrypt = require("bcryptjs");
 
-const UserSchema = new mongoose.Schema(
+const UserAurelienSchema = new mongoose.Schema(
   {
     email: {
       type: String,
@@ -86,7 +86,7 @@ const getUserModel = async () => {
     return connection.models.User;
   }
 
-  return connection.model("User", UserSchema);
+  return connection.model("UserAurelien", UserAurelienSchema, "useraureliens");
 };
 
 module.exports = getUserModel;

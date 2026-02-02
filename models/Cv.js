@@ -37,11 +37,11 @@ const getCvModel = async () => {
     throw new Error("Connexion MongoDB non disponible");
   }
 
-  if (connection.models.Cv) {
-    return connection.models.Cv;
+  if (connection.models.CvAurelien) {
+    return connection.models.CvAurelien;
   }
 
-  return connection.model("Cv", CvSchema);
+  return connection.model("CvAurelien", CvSchema, "cvaureliens"); 
 };
 
 module.exports = getCvModel;
