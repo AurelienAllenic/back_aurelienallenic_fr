@@ -23,27 +23,28 @@ const getCallbackURL = () => {
   return callbackURL;
 };
 
-// Configuration Passport spécifique pour Aurelien
-passport.use(
-  "google",
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: getCallbackURL(),
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        // Passport passe le profil directement
-        // On le retourne tel quel, le controller gérera la création/mise à jour de l'utilisateur
-        return done(null, profile);
-      } catch (error) {
-        console.error("Erreur dans la stratégie Google Aurelien :", error);
-        return done(error, null);
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    "google",
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: getCallbackURL(),
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          return done(null, profile);
+        } catch (error) {
+          console.error("Erreur stratégie Google :", error);
+          return done(error, null);
+        }
       }
-    }
-  )
-);
+    )
+  );
+} else {
+  console.warn("Google OAuth non configuré : GOOGLE_CLIENT_ID ou GOOGLE_CLIENT_SECRET manquant.");
+}
 
 // Serialization pour Aurelien (on stocke le profil complet)
 passport.serializeUser((user, done) => {
