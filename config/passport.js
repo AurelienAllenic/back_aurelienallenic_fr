@@ -12,7 +12,7 @@ const getCallbackURL = () => {
   // Sinon, construire l'URL selon l'environnement
   const isProduction = process.env.NODE_ENV === "production";
   const backendUrl = isProduction 
-    ? (process.env.BACKEND_URL || "https://back-aurelien-vercel.vercel.app")
+    ? (process.env.BACKEND_URL || "https://back-aurelienallenic-fr.vercel.app")
     : `http://localhost:${process.env.PORT || 3000}`;
   
   const callbackURL = `${backendUrl}/auth/google/callback`;

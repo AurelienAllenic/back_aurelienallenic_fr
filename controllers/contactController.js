@@ -44,36 +44,80 @@ exports.handleContact = async (req, res) => {
       replyTo: { email: email },
       subject: `[${siteName}] Nouveau message de contact`,
       htmlContent: `
-        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 650px; margin: 0 auto; background: #f8f9fa;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">🎨 ${siteName}</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Nouveau message depuis le formulaire de contact</p>
-          </div>
-          <div style="background: white; padding: 35px 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-            <h2 style="color: #2d3748; margin-top: 0; font-size: 20px; border-bottom: 2px solid #667eea; padding-bottom: 12px;">📋 Informations du contact</h2>
-            <table style="width: 100%; border-collapse: collapse; margin: 25px 0;">
-              <tr>
-                <td style="padding: 15px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #4a5568; width: 25%;">📧 Email</td>
-                <td style="padding: 15px; border-bottom: 1px solid #e2e8f0;">
-                  <a href="mailto:${email}" style="color: #667eea; text-decoration: none; font-weight: 500;">${email}</a>
-                </td>
-              </tr>
-            </table>
-            <div style="background: linear-gradient(to right, #f7fafc, #edf2f7); padding: 25px; border-radius: 8px; border-left: 5px solid #667eea; margin: 30px 0;">
-              <h3 style="color: #2d3748; margin: 0 0 15px 0; font-size: 18px;">💬 Message</h3>
-              <p style="white-space: pre-wrap; line-height: 1.8; color: #4a5568; margin: 0; font-size: 15px;">${message.replace(/\n/g, '<br>')}</p>
-            </div>
-            <div style="text-align: center; margin: 35px 0 25px 0;">
-              <a href="mailto:${email}?subject=Re: Votre message sur ${siteName}" 
-                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 35px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">✉️ Répondre</a>
-            </div>
-            <div style="text-align: center; padding-top: 25px; border-top: 1px solid #e2e8f0; margin-top: 30px;">
-              <p style="color: #a0aec0; font-size: 13px; margin: 0;">
-                📅 Reçu le ${new Date().toLocaleString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-              </p>
-            </div>
-          </div>
-        </div>
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Nouveau message - ${siteName}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@400;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+      </head>
+      <body style="margin:0; padding:0; background:#dde3e9; font-family:'Manrope', 'IBM Plex Sans', Arial, sans-serif; color:#5f6b77;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#dde3e9; padding:40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="100%" style="max-width:620px; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.08);">
+                
+                <!-- Header avec gradient -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:50px 30px; text-align:center; color:#ffffff;">
+                    <h1 style="margin:0; font-family:'Space Grotesk', sans-serif; font-size:42px; font-weight:700; letter-spacing:-0.5px;">
+                      ${siteName}
+                    </h1>
+                    <p style="margin:12px 0 0; font-size:18px; opacity:0.95; font-family:'Manrope', sans-serif;">
+                      Nouveau message reçu via le formulaire
+                    </p>
+                  </td>
+                </tr>
+                
+                <!-- Contenu principal -->
+                <tr>
+                  <td style="padding:40px 35px;">
+                    <h2 style="margin:0 0 20px; font-family:'Space Grotesk', sans-serif; font-size:28px; font-weight:600; color:#2f343b; border-bottom:3px solid #667eea; padding-bottom:12px;">
+                      Détails du contact
+                    </h2>
+                    
+                    <table width="100%" cellpadding="12" cellspacing="0" border="0" style="font-size:16px; color:#5f6b77; font-family:'IBM Plex Sans', sans-serif;">
+                      <tr>
+                        <td width="140" style="font-weight:600; color:#2f343b;">Email :</td>
+                        <td><a href="mailto:${email}" style="color:#667eea; text-decoration:none; font-weight:500;">${email}</a></td>
+                      </tr>
+                    </table>
+                    
+                    <h3 style="margin:35px 0 15px; font-family:'Space Grotesk', sans-serif; font-size:22px; color:#2f343b;">
+                      💬 Message reçu
+                    </h3>
+                    <div style="background:#f8f9fa; padding:25px; border-radius:10px; border-left:5px solid #764ba2; line-height:1.7; font-size:16px; color:#5f6b77; white-space:pre-wrap; font-family:'Manrope', sans-serif;">
+                      ${message.replace(/\n/g, '<br>')}
+                    </div>
+                    
+                    <!-- Bouton répondre -->
+                    <div style="text-align:center; margin:40px 0;">
+                      <a href="mailto:${email}?subject=Re: Votre message sur ${siteName}" 
+                        style="display:inline-block; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:#ffffff; padding:16px 40px; text-decoration:none; border-radius:10px; font-family:'Manrope', sans-serif; font-weight:600; font-size:17px; box-shadow:0 6px 20px rgba(102,126,234,0.25);">
+                        ✉️ Répondre maintenant
+                      </a>
+                    </div>
+                    
+                    <!-- Footer date -->
+                    <p style="text-align:center; margin:30px 0 0; font-size:14px; color:#a9b0b8; font-family:'IBM Plex Sans', sans-serif;">
+                      Reçu le ${new Date().toLocaleString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background:#f8f9fa; padding:25px; text-align:center; font-size:13px; color:#a9b0b8; border-top:1px solid #e2e8f0;">
+                    © ${new Date().getFullYear()} ${siteName} – Tous droits réservés
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
       `,
     };
 
@@ -88,33 +132,80 @@ exports.handleContact = async (req, res) => {
       to: [{ email: email }],
       subject: 'Message bien reçu ! 🎨',
       htmlContent: `
-        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8f9fa;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700;">🎨 ${siteName}</h1>
-            <p style="color: rgba(255,255,255,0.95); margin: 15px 0 0 0; font-size: 18px; font-weight: 500;">Merci de nous avoir contactés !</p>
-          </div>
-          <div style="background: white; padding: 35px 30px; border-radius: 0 0 10px 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-            <h2 style="color: #2d3748; font-size: 24px; margin-top: 0;">Bonjour ! 👋</h2>
-            <p style="color: #4a5568; line-height: 1.8; font-size: 16px; margin: 20px 0;">
-              Nous avons bien reçu votre message et nous vous en remercions sincèrement. Notre équipe vous répondra dans les plus brefs délais.
-            </p>
-            <div style="background: linear-gradient(to right, #f7fafc, #edf2f7); padding: 25px; border-radius: 8px; border-left: 5px solid #667eea; margin: 30px 0;">
-              <p style="margin: 0 0 8px 0; color: #718096; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">📝 Récapitulatif de votre message</p>
-              <p style="white-space: pre-wrap; color: #2d3748; margin: 0; line-height: 1.7; font-size: 15px;">${message.replace(/\n/g, '<br>')}</p>
-            </div>
-            <p style="color: #4a5568; line-height: 1.8; font-size: 16px; margin: 25px 0;">
-              En attendant notre réponse, n'hésitez pas à découvrir nos dernières actualités sur
-              <a href="${siteUrl}" style="color: #667eea; text-decoration: none; font-weight: 600; border-bottom: 2px solid #667eea;">${siteUrl.replace(/^https?:\/\//, '')}</a>
-            </p>
-            <div style="margin-top: 40px; padding-top: 30px; border-top: 2px solid #e2e8f0; text-align: center;">
-              <p style="color: #718096; font-size: 16px; margin: 8px 0;">🎨 À très bientôt !</p>
-              <p style="color: #2d3748; font-weight: 700; font-size: 18px; margin: 8px 0;">L'équipe ${siteName}</p>
-            </div>
-          </div>
-          <div style="text-align: center; padding: 25px 20px;">
-            <p style="color: #a0aec0; font-size: 13px; margin: 0;">© ${new Date().getFullYear()} ${siteName} - Tous droits réservés</p>
-          </div>
-        </div>
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Message bien reçu – ${siteName}</title>
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+      </head>
+      <body style="margin:0; padding:0; background:#dde3e9; font-family:'Manrope', 'IBM Plex Sans', Arial, sans-serif; color:#5f6b77;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#dde3e9; padding:40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="100%" style="max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.08);">
+                
+                <!-- Header -->
+                <tr>
+                  <td style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding:55px 30px; text-align:center; color:#ffffff;">
+                    <h1 style="margin:0; font-family:'Space Grotesk', sans-serif; font-size:48px; font-weight:700; letter-spacing:-1px;">
+                      ${siteName}
+                    </h1>
+                    <p style="margin:18px 0 0; font-size:20px; font-weight:500; opacity:0.95;">
+                      Merci pour votre message !
+                    </p>
+                  </td>
+                </tr>
+                
+                <!-- Contenu -->
+                <tr>
+                  <td style="padding:45px 35px;">
+                    <h2 style="margin:0 0 24px; font-family:'Space Grotesk', sans-serif; font-size:28px; color:#2f343b; font-weight:600;">
+                      Bonjour ! 👋
+                    </h2>
+                    
+                    <p style="font-size:16px; line-height:1.8; color:#5f6b77; margin:0 0 28px;">
+                      Nous avons bien reçu votre message et nous vous en remercions sincèrement.<br>
+                      Notre équipe reviendra vers vous dans les plus brefs délais.
+                    </p>
+                    
+                    <h3 style="margin:35px 0 16px; font-family:'Space Grotesk', sans-serif; font-size:21px; color:#2f343b;">
+                      📝 Récapitulatif de votre message
+                    </h3>
+                    <div style="background:#f8f9fa; padding:28px; border-radius:10px; border-left:5px solid #764ba2; font-size:16px; line-height:1.7; color:#5f6b77; white-space:pre-wrap; font-family:'Manrope', sans-serif;">
+                      ${message.replace(/\n/g, '<br>')}
+                    </div>
+                    
+                    <p style="margin:35px 0 0; font-size:16px; line-height:1.8; color:#5f6b77;">
+                      En attendant, n’hésitez pas à explorer notre univers sur<br>
+                      <a href="${siteUrl}" style="color:#667eea; text-decoration:none; font-weight:600; border-bottom:2px solid #667eea;">${siteUrl.replace(/^https?:\/\//, '')}</a>
+                    </p>
+                    
+                    <!-- Signature -->
+                    <div style="text-align:center; margin:50px 0 20px;">
+                      <p style="font-size:18px; font-weight:700; color:#2f343b; margin:0 0 8px; font-family:'Space Grotesk', sans-serif;">
+                        À très bientôt 🎨
+                      </p>
+                      <p style="font-size:17px; color:#5f6b77; margin:0; font-family:'Manrope', sans-serif;">
+                        L’équipe ${siteName}
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background:#f8f9fa; padding:30px; text-align:center; font-size:14px; color:#a9b0b8; border-top:1px solid #e2e8f0;">
+                    © ${new Date().getFullYear()} ${siteName} – Tous droits réservés
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
       `,
     };
 
