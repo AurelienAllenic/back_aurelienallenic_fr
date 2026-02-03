@@ -10,7 +10,12 @@ const AnalyticsSchema = new mongoose.Schema({
   path: String,
   label: String,
   metadata: Object,
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { 
+    type: Date,
+    default: Date.now,
+    index: true,
+    expires: 604800
+    }
 });
 
 module.exports = mongoose.model('Analytics', AnalyticsSchema);

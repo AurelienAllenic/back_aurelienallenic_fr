@@ -21,6 +21,10 @@ router.put(
 );
 router.delete("/cv", authController.requireAuth, cvController.deleteCv);
 
+
+// Analytics
 router.post('/track', analyticsController.trackEvent);
+router.post('/analytics/aggregate', authController.requireAuth, analyticsController.aggregateDaily);
+router.get('/analytics/daily', authController.requireAuth, analyticsController.getDailyStats);
 
 module.exports = router;

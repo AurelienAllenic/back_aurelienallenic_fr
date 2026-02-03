@@ -1,7 +1,8 @@
-// controllers/analyticsController.js
 const Analytics = require('../models/Analytics');
 const crypto = require('crypto');
-const { connectToDatabase } = require('../utils/mongodb'); // ← Ajoute les accolades
+const { connectToDatabase } = require('../utils/mongodb');
+const { aggregateDailyStats } = require('../utils/aggregateAnalytics');
+const AnalyticsDaily = require('../models/AnalyticsDaily');
 
 exports.trackEvent = async (req, res) => {
   try {
@@ -92,6 +93,49 @@ exports.getAnalytics = async (req, res) => {
     
   } catch (error) {
     console.error('❌ Get analytics error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+exports.aggregateDaily = async (req, res) => {
+  try {
+    const { date } = req.query; // Format: "2026-02-03" (optionnel)
+    
+    const targetDate = date ? new Date(date) : null;
+    const result = await aggregateDailyStats(targetDate);
+    
+    res.json({ 
+      success: true, 
+      result 
+    });
+  } catch (error) {
+    console.error('❌ Aggregate error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getDailyStats = async (req, res) => {
+  try {
+    await connectToDatabase();
+    
+    const { startDate, endDate, limit = 30 } = req.query;
+    
+    const filter = {};
+    if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) filter.date.$gte = startDate;
+      if (endDate) filter.date.$lte = endDate;
+    }
+    
+    const stats = await AnalyticsDaily
+      .find(filter)
+      .sort({ date: -1 })
+      .limit(parseInt(limit));
+    
+    res.json(stats);
+  } catch (error) {
+    console.error('❌ Get daily stats error:', error.message);
     res.status(500).json({ error: error.message });
   }
 };
