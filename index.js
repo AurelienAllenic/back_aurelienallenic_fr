@@ -19,12 +19,16 @@ connectDB();
 
 app.set("trust proxy", 1);
 app.use(corsConfig);
+
+// ✅ BODY-PARSER EN PREMIER (avant rate limiter)
+app.use(bodyParser.json({ limit: "15mb" }));
+app.use(bodyParser.urlencoded({ limit: "15mb", extended: true }));
+
+// ✅ RATE LIMITER APRÈS (maintenant req.body existe)
 app.use((req, res, next) => {
   if (req.method === "OPTIONS") return next();
   return limiter(req, res, next);
 });
-app.use(bodyParser.json({ limit: "15mb" }));
-app.use(bodyParser.urlencoded({ limit: "15mb", extended: true }));
 
 app.use(
   session({
