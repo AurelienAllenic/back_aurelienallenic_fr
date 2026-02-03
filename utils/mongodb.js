@@ -5,7 +5,7 @@ const connectToDatabase = require('../utils/mongodb');
 
 exports.trackEvent = async (req, res) => {
   try {
-    // IMPORTANT : Connexion à chaque requête pour serverless
+    // Utilise la connexion cachée de utils/mongodb.js
     await connectToDatabase();
     
     console.log('📊 Tracking event received:', req.body);
@@ -48,7 +48,6 @@ exports.trackEvent = async (req, res) => {
   }
 };
 
-// Route GET pour le dashboard
 exports.getAnalytics = async (req, res) => {
   try {
     await connectToDatabase();
