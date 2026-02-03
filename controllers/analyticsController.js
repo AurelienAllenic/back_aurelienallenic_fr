@@ -1,11 +1,10 @@
 // controllers/analyticsController.js
 const Analytics = require('../models/Analytics');
 const crypto = require('crypto');
-const connectToDatabase = require('../utils/mongodb');
+const { connectToDatabase } = require('../utils/mongodb'); // ← Ajoute les accolades
 
 exports.trackEvent = async (req, res) => {
   try {
-    // IMPORTANT : Connexion à chaque requête pour serverless
     await connectToDatabase();
     
     console.log('📊 Tracking event received:', req.body);
@@ -48,7 +47,6 @@ exports.trackEvent = async (req, res) => {
   }
 };
 
-// Route GET pour le dashboard
 exports.getAnalytics = async (req, res) => {
   try {
     await connectToDatabase();
