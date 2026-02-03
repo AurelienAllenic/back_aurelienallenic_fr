@@ -3,57 +3,44 @@ const AnalyticsDaily = require('../models/AnalyticsDaily');
 
 async function aggregateDailyStats(targetDate) {
   try {
-    // Si aucune date fournie → on prend HIER (veille) pour le cron
     let date;
     if (targetDate) {
       date = new Date(targetDate);
     } else {
-      date = new Date();               // aujourd'hui
-      date.setDate(date.getDate() - 1); // → hier
+      date = new Date();
+      date.setDate(date.getDate() - 1);
     }
 
-    // Normaliser à minuit (UTC ou local selon ton choix)
     date.setHours(0, 0, 0, 0);
-
     const nextDay = new Date(date);
     nextDay.setDate(nextDay.getDate() + 1);
 
-    const dateString = date.toISOString().split('T')[0]; // "2026-02-03"
+    const dateString = date.toISOString().split('T')[0];
+    console.log(`📊 Aggregating analytics for ${dateString}...`);
 
-    console.log(`📊 Aggregating analytics for ${dateString} (targetDate: ${targetDate ? 'fournie' : 'absente → hier'})...`);
-
-    // Récupérer les événements de cette journée
+    // 1. Récupérer les événements
     const events = await Analytics.find({
-      createdAt: {
-        $gte: date,
-        $lt: nextDay
-      }
+      createdAt: { $gte: date, $lt: nextDay }
     });
 
     if (events.length === 0) {
       console.log(`ℹ️ Aucun événement pour ${dateString}`);
-      return {
-        date: dateString,
-        eventsProcessed: 0,
-        pageViews: 0,
-        uniqueVisitors: 0,
-        clicks: {}
-      };
+      return { date: dateString, eventsProcessed: 0 };
     }
 
-    // Calcul des stats (le reste reste identique)
+    // 2. Calcul des stats
     const pageViews = events.filter(e => e.type === 'PAGE_VIEW').length;
     const clicks = {};
     const visitorIds = new Set();
 
     events.forEach(event => {
       visitorIds.add(event.visitorId);
-      
       if (event.type === 'CLICK' && event.label) {
         clicks[event.label] = (clicks[event.label] || 0) + 1;
       }
     });
 
+    // 3. Sauvegarder dans la table agrégée (Daily)
     await AnalyticsDaily.findOneAndUpdate(
       { date: dateString },
       {
@@ -65,18 +52,22 @@ async function aggregateDailyStats(targetDate) {
       { upsert: true, new: true }
     );
 
-    console.log(`✅ Aggregated ${events.length} events for ${dateString}`);
-    console.log(`   - ${pageViews} page views`);
-    console.log(`   - ${visitorIds.size} unique visitors`);
-    console.log(`   - Clicks:`, clicks);
+    // 4. SUPPRESSION des données brutes
+    // On utilise les mêmes filtres de date pour être sûr de ne supprimer que ce qu'on a traité
+    const deleteResult = await Analytics.deleteMany({
+      createdAt: { $gte: date, $lt: nextDay }
+    });
+
+    console.log(`✅ Aggregated ${events.length} events and DELETED ${deleteResult.deletedCount} raw records for ${dateString}`);
 
     return {
       date: dateString,
       eventsProcessed: events.length,
+      deletedCount: deleteResult.deletedCount,
       pageViews,
-      uniqueVisitors: visitorIds.size,
-      clicks
+      uniqueVisitors: visitorIds.size
     };
+
   } catch (error) {
     console.error('❌ Aggregation error:', error);
     throw error;
