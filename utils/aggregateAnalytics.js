@@ -40,20 +40,38 @@ async function aggregateDailyStats(targetDate) {
       }
     });
 
-    // 3. Sauvegarder dans la table agrégée (Daily)
+    // 3. Récupérer l'existant
+    const existing = await AnalyticsDaily.findOne({ date: dateString });
+
+    // 4. Préparer les données finales (AJOUT et non remplacement)
+    let finalPageViews = pageViews;
+    let finalClicks = { ...clicks };
+    let finalVisitorIds = new Set(visitorIds);
+
+    if (existing) {
+      // AJOUTER au lieu de remplacer
+      finalPageViews += existing.pageViews;
+      
+      Object.keys(existing.clicks || {}).forEach(label => {
+        finalClicks[label] = (finalClicks[label] || 0) + existing.clicks[label];
+      });
+      
+      (existing.visitorIds || []).forEach(id => finalVisitorIds.add(id));
+    }
+
+    // 5. Sauvegarder dans la table agrégée (Daily)
     await AnalyticsDaily.findOneAndUpdate(
       { date: dateString },
       {
-        pageViews,
-        clicks,
-        uniqueVisitors: visitorIds.size,
-        visitorIds: Array.from(visitorIds)
+        pageViews: finalPageViews,
+        clicks: finalClicks,
+        uniqueVisitors: finalVisitorIds.size,
+        visitorIds: Array.from(finalVisitorIds)
       },
       { upsert: true, new: true }
     );
 
-    // 4. SUPPRESSION des données brutes
-    // On utilise les mêmes filtres de date pour être sûr de ne supprimer que ce qu'on a traité
+    // 6. SUPPRESSION des données brutes
     const deleteResult = await Analytics.deleteMany({
       createdAt: { $gte: date, $lt: nextDay }
     });
@@ -64,8 +82,8 @@ async function aggregateDailyStats(targetDate) {
       date: dateString,
       eventsProcessed: events.length,
       deletedCount: deleteResult.deletedCount,
-      pageViews,
-      uniqueVisitors: visitorIds.size
+      pageViews: finalPageViews,
+      uniqueVisitors: finalVisitorIds.size
     };
 
   } catch (error) {
