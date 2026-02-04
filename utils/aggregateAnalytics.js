@@ -52,9 +52,12 @@ async function aggregateDailyStats(targetDate) {
       // AJOUTER au lieu de remplacer
       finalPageViews += existing.pageViews;
       
-      Object.keys(existing.clicks || {}).forEach(label => {
-        finalClicks[label] = (finalClicks[label] || 0) + existing.clicks[label];
-      });
+      // Convertir la Map Mongoose en objet simple
+      if (existing.clicks) {
+        existing.clicks.forEach((count, label) => {
+          finalClicks[label] = (finalClicks[label] || 0) + count;
+        });
+      }
       
       (existing.visitorIds || []).forEach(id => finalVisitorIds.add(id));
     }
