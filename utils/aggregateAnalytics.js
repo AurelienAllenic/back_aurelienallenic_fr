@@ -28,48 +28,42 @@ async function aggregateDailyStats(targetDate) {
       return { date: dateString, eventsProcessed: 0 };
     }
 
-    // 2. Calcul des stats des NOUVEAUX événements
-    const newPageViews = events.filter(e => e.type === 'PAGE_VIEW').length;
-    const newClicks = {};
-    const newVisitorIds = new Set();
+    // 2. Calcul des stats
+    const pageViews = events.filter(e => e.type === 'PAGE_VIEW').length;
+    const clicks = {};
+    const visitorIds = new Set();
 
     events.forEach(event => {
-      newVisitorIds.add(event.visitorId);
+      visitorIds.add(event.visitorId);
       if (event.type === 'CLICK' && event.label) {
-        newClicks[event.label] = (newClicks[event.label] || 0) + 1;
+        clicks[event.label] = (clicks[event.label] || 0) + 1;
       }
     });
 
-    // 3. Récupérer les données existantes
-    const existingDaily = await AnalyticsDaily.findOne({ date: dateString });
-
-    // 4. Fusionner avec l'existant si présent
-    let finalPageViews = newPageViews;
-    let finalClicks = { ...newClicks };
-    let finalVisitorIds = Array.from(newVisitorIds);
-
-    if (existingDaily) {
-      console.log(`🔄 Merging with existing data for ${dateString}`);
-      
+    // 3. RÉCUPÉRER LES DONNÉES EXISTANTES
+    const existing = await AnalyticsDaily.findOne({ date: dateString });
+    
+    // 4. FUSIONNER SI EXISTANT
+    let finalPageViews = pageViews;
+    let finalClicks = clicks;
+    let finalVisitorIds = visitorIds;
+    
+    if (existing) {
       // Additionner les pageViews
-      finalPageViews += existingDaily.pageViews || 0;
-
+      finalPageViews += existing.pageViews;
+      
       // Fusionner les clicks
-      if (existingDaily.clicks) {
-        // Convertir Map Mongoose en objet si nécessaire
-        const existingClicksObj = existingDaily.clicks instanceof Map 
-          ? Object.fromEntries(existingDaily.clicks) 
-          : existingDaily.clicks;
-        
-        Object.keys(existingClicksObj).forEach(label => {
-          finalClicks[label] = (finalClicks[label] || 0) + existingClicksObj[label];
-        });
+      const existingClicks = existing.clicks instanceof Map 
+        ? Object.fromEntries(existing.clicks) 
+        : existing.clicks;
+      
+      for (const label in existingClicks) {
+        finalClicks[label] = (finalClicks[label] || 0) + existingClicks[label];
       }
-
-      // Fusionner les visitorIds (éviter les doublons)
-      if (existingDaily.visitorIds && Array.isArray(existingDaily.visitorIds)) {
-        const combinedSet = new Set([...existingDaily.visitorIds, ...newVisitorIds]);
-        finalVisitorIds = Array.from(combinedSet);
+      
+      // Fusionner les visitorIds
+      if (existing.visitorIds) {
+        existing.visitorIds.forEach(id => finalVisitorIds.add(id));
       }
     }
 
@@ -79,8 +73,8 @@ async function aggregateDailyStats(targetDate) {
       {
         pageViews: finalPageViews,
         clicks: finalClicks,
-        uniqueVisitors: finalVisitorIds.length,
-        visitorIds: finalVisitorIds
+        uniqueVisitors: finalVisitorIds.size,
+        visitorIds: Array.from(finalVisitorIds)
       },
       { upsert: true, new: true }
     );
@@ -90,15 +84,14 @@ async function aggregateDailyStats(targetDate) {
       createdAt: { $gte: date, $lt: nextDay }
     });
 
-    console.log(`✅ Aggregated ${events.length} events (${existingDaily ? 'MERGED' : 'NEW'}) and DELETED ${deleteResult.deletedCount} raw records for ${dateString}`);
+    console.log(`✅ Aggregated ${events.length} events and DELETED ${deleteResult.deletedCount} raw records for ${dateString}`);
 
     return {
       date: dateString,
       eventsProcessed: events.length,
       deletedCount: deleteResult.deletedCount,
       pageViews: finalPageViews,
-      uniqueVisitors: finalVisitorIds.length,
-      wasMerged: !!existingDaily
+      uniqueVisitors: finalVisitorIds.size
     };
 
   } catch (error) {
