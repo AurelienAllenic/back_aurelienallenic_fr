@@ -41,7 +41,7 @@ async function aggregateDailyStats(targetDate) {
     });
 
     // 3. Récupérer les données existantes (si elles existent)
-    const existingDaily = await AnalyticsDaily.findOne({ date: dateString });
+    const existingDaily = await AnalyticsDaily.findOne({ date: dateString }).lean();
 
     // 4. Fusionner les données
     let finalPageViews = newPageViews;
@@ -52,7 +52,7 @@ async function aggregateDailyStats(targetDate) {
       // Additionner les pageViews
       finalPageViews += existingDaily.pageViews || 0;
 
-      // Fusionner les clicks
+      // Fusionner les clicks (existingDaily.clicks est maintenant un objet plain)
       if (existingDaily.clicks) {
         Object.keys(existingDaily.clicks).forEach(label => {
           finalClicks[label] = (finalClicks[label] || 0) + existingDaily.clicks[label];
@@ -60,7 +60,7 @@ async function aggregateDailyStats(targetDate) {
       }
 
       // Fusionner les visitorIds (éviter les doublons)
-      if (existingDaily.visitorIds) {
+      if (existingDaily.visitorIds && Array.isArray(existingDaily.visitorIds)) {
         existingDaily.visitorIds.forEach(id => finalVisitorIds.add(id));
       }
     }
