@@ -23,7 +23,13 @@ async function aggregateDailyStats(targetDate) {
     });
 
     if (events.length === 0) {
-      return { date: dateString, eventsProcessed: 0 };
+      console.log(`ℹ️ Aucun événement pour ${dateString}`);
+      return { 
+        date: dateString, 
+        eventsProcessed: 0,
+        deletedCount: 0,
+        message: 'Aucune donnée à agréger'
+      };
     }
 
     // 2. Calcul des stats
@@ -47,7 +53,6 @@ async function aggregateDailyStats(targetDate) {
     let finalVisitorIds = new Set(visitorIds);
 
     if (existing) {
-      
       // AJOUTER au lieu de remplacer
       finalPageViews += existing.pageViews;
       
@@ -62,7 +67,6 @@ async function aggregateDailyStats(targetDate) {
     }
 
     // 5. Sauvegarder dans la table agrégée (Daily)
-    
     await AnalyticsDaily.findOneAndUpdate(
       { date: dateString },
       {
@@ -79,6 +83,8 @@ async function aggregateDailyStats(targetDate) {
       createdAt: { $gte: date, $lt: nextDay }
     });
 
+    console.log(`✅ Aggregated ${events.length} events and DELETED ${deleteResult.deletedCount} raw records for ${dateString}`);
+
     return {
       date: dateString,
       eventsProcessed: events.length,
@@ -89,7 +95,6 @@ async function aggregateDailyStats(targetDate) {
 
   } catch (error) {
     console.error('❌ Aggregation error:', error);
-    console.error('❌ Error stack:', error.stack);
     throw error;
   }
 }
