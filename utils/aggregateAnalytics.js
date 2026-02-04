@@ -40,46 +40,20 @@ async function aggregateDailyStats(targetDate) {
       }
     });
 
-    // 3. RÉCUPÉRER LES DONNÉES EXISTANTES
-    const existing = await AnalyticsDaily.findOne({ date: dateString });
-    
-    // 4. FUSIONNER SI EXISTANT
-    let finalPageViews = pageViews;
-    let finalClicks = clicks;
-    let finalVisitorIds = visitorIds;
-    
-    if (existing) {
-      // Additionner les pageViews
-      finalPageViews += existing.pageViews;
-      
-      // Fusionner les clicks
-      const existingClicks = existing.clicks instanceof Map 
-        ? Object.fromEntries(existing.clicks) 
-        : existing.clicks;
-      
-      for (const label in existingClicks) {
-        finalClicks[label] = (finalClicks[label] || 0) + existingClicks[label];
-      }
-      
-      // Fusionner les visitorIds
-      if (existing.visitorIds) {
-        existing.visitorIds.forEach(id => finalVisitorIds.add(id));
-      }
-    }
-
-    // 5. Sauvegarder dans la table agrégée (Daily)
+    // 3. Sauvegarder dans la table agrégée (Daily)
     await AnalyticsDaily.findOneAndUpdate(
       { date: dateString },
       {
-        pageViews: finalPageViews,
-        clicks: finalClicks,
-        uniqueVisitors: finalVisitorIds.size,
-        visitorIds: Array.from(finalVisitorIds)
+        pageViews,
+        clicks,
+        uniqueVisitors: visitorIds.size,
+        visitorIds: Array.from(visitorIds)
       },
       { upsert: true, new: true }
     );
 
-    // 6. SUPPRESSION des données brutes
+    // 4. SUPPRESSION des données brutes
+    // On utilise les mêmes filtres de date pour être sûr de ne supprimer que ce qu'on a traité
     const deleteResult = await Analytics.deleteMany({
       createdAt: { $gte: date, $lt: nextDay }
     });
@@ -90,8 +64,8 @@ async function aggregateDailyStats(targetDate) {
       date: dateString,
       eventsProcessed: events.length,
       deletedCount: deleteResult.deletedCount,
-      pageViews: finalPageViews,
-      uniqueVisitors: finalVisitorIds.size
+      pageViews,
+      uniqueVisitors: visitorIds.size
     };
 
   } catch (error) {
