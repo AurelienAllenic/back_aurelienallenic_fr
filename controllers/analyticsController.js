@@ -157,6 +157,8 @@ exports.cronAggregateDaily = async (req, res) => {
 
     console.log('✅ Cron triggered successfully at', new Date().toISOString());
 
+    await connectToDatabase();
+
     const targetDate = req.query.date || null;
     const result = await aggregateDailyStats(targetDate);
 
