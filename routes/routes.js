@@ -27,4 +27,6 @@ router.post('/track', analyticsController.trackEvent);
 router.post('/analytics/aggregate', authController.requireAuth, analyticsController.aggregateDaily);
 router.get('/analytics/daily', authController.requireAuth, analyticsController.getDailyStats);
 
+router.post('/analytics/cron-aggregate', analyticsController.cronAggregateDaily);
+
 module.exports = router;
