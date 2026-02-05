@@ -1,96 +1,100 @@
 const Analytics = require('../models/Analytics');
 const AnalyticsDaily = require('../models/AnalyticsDaily');
 
-async function aggregateDailyStats(targetDate) {
+async function aggregateDailyStats() {
   try {
-    let date;
-    if (targetDate) {
-      date = new Date(targetDate);
-    } else {
-      date = new Date();
-      date.setDate(date.getDate());
-    }
-
-    date.setHours(0, 0, 0, 0);
-    const nextDay = new Date(date);
-    nextDay.setDate(nextDay.getDate() + 1);
-
-    const dateString = date.toISOString().split('T')[0];
-
-    // 1. Récupérer les événements
-    const events = await Analytics.find({
-      createdAt: { $gte: date, $lt: nextDay }
-    });
+    // 1. Récupérer TOUS les événements non agrégés
+    const events = await Analytics.find({});
 
     if (events.length === 0) {
-      console.log(`ℹ️ Aucun événement pour ${dateString}`);
+      console.log('ℹ️ Aucun événement à agréger');
       return { 
-        date: dateString, 
         eventsProcessed: 0,
         deletedCount: 0,
         message: 'Aucune donnée à agréger'
       };
     }
 
-    // 2. Calcul des stats
-    const pageViews = events.filter(e => e.type === 'PAGE_VIEW').length;
-    const clicks = {};
-    const visitorIds = new Set();
-
+    // 2. Grouper les événements par date
+    const eventsByDate = {};
+    
     events.forEach(event => {
-      visitorIds.add(event.visitorId);
-      if (event.type === 'CLICK' && event.label) {
-        clicks[event.label] = (clicks[event.label] || 0) + 1;
+      const eventDate = new Date(event.createdAt);
+      const dateString = eventDate.toISOString().split('T')[0];
+      
+      if (!eventsByDate[dateString]) {
+        eventsByDate[dateString] = [];
       }
+      eventsByDate[dateString].push(event);
     });
 
-    // 3. Récupérer l'existant
-    const existing = await AnalyticsDaily.findOne({ date: dateString });
+    // 3. Agréger chaque jour séparément
+    const results = [];
     
-    // 4. Préparer les données finales (AJOUT et non remplacement)
-    let finalPageViews = pageViews;
-    let finalClicks = { ...clicks };
-    let finalVisitorIds = new Set(visitorIds);
+    for (const [dateString, dayEvents] of Object.entries(eventsByDate)) {
+      const pageViews = dayEvents.filter(e => e.type === 'PAGE_VIEW').length;
+      const clicks = {};
+      const visitorIds = new Set();
 
-    if (existing) {
-      // AJOUTER au lieu de remplacer
-      finalPageViews += existing.pageViews;
+      dayEvents.forEach(event => {
+        visitorIds.add(event.visitorId);
+        if (event.type === 'CLICK' && event.label) {
+          clicks[event.label] = (clicks[event.label] || 0) + 1;
+        }
+      });
+
+      // 4. Récupérer l'existant pour cette date
+      const existing = await AnalyticsDaily.findOne({ date: dateString });
       
-      // Convertir la Map Mongoose en objet simple
-      if (existing.clicks) {
-        existing.clicks.forEach((count, label) => {
-          finalClicks[label] = (finalClicks[label] || 0) + count;
-        });
+      let finalPageViews = pageViews;
+      let finalClicks = { ...clicks };
+      let finalVisitorIds = new Set(visitorIds);
+
+      if (existing) {
+        finalPageViews += existing.pageViews;
+        
+        if (existing.clicks) {
+          existing.clicks.forEach((count, label) => {
+            finalClicks[label] = (finalClicks[label] || 0) + count;
+          });
+        }
+        
+        (existing.visitorIds || []).forEach(id => finalVisitorIds.add(id));
       }
-      
-      (existing.visitorIds || []).forEach(id => finalVisitorIds.add(id));
+
+      // 5. Sauvegarder dans la table agrégée
+      await AnalyticsDaily.findOneAndUpdate(
+        { date: dateString },
+        {
+          pageViews: finalPageViews,
+          clicks: finalClicks,
+          uniqueVisitors: finalVisitorIds.size,
+          visitorIds: Array.from(finalVisitorIds)
+        },
+        { upsert: true, new: true }
+      );
+
+      results.push({
+        date: dateString,
+        eventsProcessed: dayEvents.length,
+        pageViews: finalPageViews,
+        uniqueVisitors: finalVisitorIds.size
+      });
+
+      console.log(`✅ Aggregated ${dayEvents.length} events for ${dateString}`);
     }
 
-    // 5. Sauvegarder dans la table agrégée (Daily)
-    await AnalyticsDaily.findOneAndUpdate(
-      { date: dateString },
-      {
-        pageViews: finalPageViews,
-        clicks: finalClicks,
-        uniqueVisitors: finalVisitorIds.size,
-        visitorIds: Array.from(finalVisitorIds)
-      },
-      { upsert: true, new: true }
-    );
+    // 6. SUPPRESSION de TOUS les événements bruts
+    const deleteResult = await Analytics.deleteMany({});
 
-    // 6. SUPPRESSION des données brutes
-    const deleteResult = await Analytics.deleteMany({
-      createdAt: { $gte: date, $lt: nextDay }
-    });
-
-    console.log(`✅ Aggregated ${events.length} events and DELETED ${deleteResult.deletedCount} raw records for ${dateString}`);
+    console.log(`✅ Total: ${events.length} events aggregated and DELETED from ${results.length} different days`);
 
     return {
-      date: dateString,
       eventsProcessed: events.length,
       deletedCount: deleteResult.deletedCount,
-      pageViews: finalPageViews,
-      uniqueVisitors: finalVisitorIds.size
+      daysAggregated: results.length,
+      details: results,
+      message: 'Aggregation completed successfully'
     };
 
   } catch (error) {
