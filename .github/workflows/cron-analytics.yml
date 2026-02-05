@@ -2,7 +2,7 @@ name: Daily Analytics Aggregation
 
 on:
   schedule:
-    - cron: '30 22 * * *'
+    - cron: '00 20 * * *'
   workflow_dispatch:
 
 jobs:
@@ -11,7 +11,8 @@ jobs:
     steps:
       - name: Call aggregation endpoint
         run: |
-          curl -X GET "${{ secrets.BACKEND_URL }}/analytics/cron-aggregate?secret=${{ secrets.CRON_SECRET }}" \
+          TODAY=$(date -u +%Y-%m-%d)
+          curl -X GET "${{ secrets.BACKEND_URL }}/analytics/cron-aggregate?secret=${{ secrets.CRON_SECRET }}&date=$TODAY" \
             --max-time 30 \
             --retry 2 \
             --retry-delay 5
