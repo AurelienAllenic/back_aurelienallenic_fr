@@ -1,179 +1,106 @@
 const Analytics = require('../models/Analytics');
-const crypto = require('crypto');
-const { connectToDatabase } = require('../utils/mongodb');
-const { aggregateDailyStats } = require('../utils/aggregateAnalytics');
 const AnalyticsDaily = require('../models/AnalyticsDaily');
 
-exports.trackEvent = async (req, res) => {
+async function aggregateDailyStats() {
   try {
-    await connectToDatabase();
-    
-    console.log('📊 Tracking event received:', req.body);
-    
-    const { type, path, label, metadata } = req.body;
+    // 1. Récupérer TOUS les événements non agrégés
+    const events = await Analytics.find({});
 
-    if (!type) {
-      return res.status(400).json({ error: 'Type is required' });
+    if (events.length === 0) {
+      console.log('ℹ️ Aucun événement à agréger');
+      return { 
+        eventsProcessed: 0,
+        deletedCount: 0,
+        message: 'Aucune donnée à agréger'
+      };
     }
 
-    const salt = process.env.ANALYTICS_SALT || "secret_portfo_123";
-    const ip = req.headers['x-forwarded-for'] || 
-               req.headers['x-real-ip'] || 
-               req.socket.remoteAddress || 
-               'unknown';
-    const userAgent = req.headers['user-agent'] || 'unknown';
+    // 2. Grouper les événements par date
+    const eventsByDate = {};
     
-    const visitorId = crypto
-      .createHash('sha256')
-      .update(ip + userAgent + salt)
-      .digest('hex')
-      .substring(0, 16);
-
-    const newEvent = new Analytics({
-      visitorId,
-      type,
-      path: path || '/',
-      label: label || null,
-      metadata: metadata || {}
-    });
-
-    await newEvent.save();
-    
-    console.log('✅ Event saved successfully');
-    res.status(200).json({ status: 'ok' });
-    
-  } catch (error) {
-    console.error('❌ Analytics error:', error.message);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-exports.getAnalytics = async (req, res) => {
-  try {
-    await connectToDatabase();
-    
-    const { type, limit = 100 } = req.query;
-    const filter = type ? { type } : {};
-    
-    const events = await Analytics
-      .find(filter)
-      .sort({ createdAt: -1 })
-      .limit(parseInt(limit));
-
-    const stats = await Analytics.aggregate([
-      {
-        $group: {
-          _id: '$type',
-          count: { $sum: 1 },
-          uniqueVisitors: { $addToSet: '$visitorId' }
-        }
-      },
-      {
-        $project: {
-          type: '$_id',
-          count: 1,
-          uniqueVisitors: { $size: '$uniqueVisitors' }
-        }
+    events.forEach(event => {
+      const eventDate = new Date(event.createdAt);
+      const dateString = eventDate.toISOString().split('T')[0];
+      
+      if (!eventsByDate[dateString]) {
+        eventsByDate[dateString] = [];
       }
-    ]);
+      eventsByDate[dateString].push(event);
+    });
 
-    const topClicks = await Analytics.aggregate([
-      { $match: { type: 'CLICK' } },
-      {
-        $group: {
-          _id: '$label',
-          count: { $sum: 1 }
+    // 3. Agréger chaque jour séparément
+    const results = [];
+    
+    for (const [dateString, dayEvents] of Object.entries(eventsByDate)) {
+      const pageViews = dayEvents.filter(e => e.type === 'PAGE_VIEW').length;
+      const clicks = {};
+      const visitorIds = new Set();
+
+      dayEvents.forEach(event => {
+        visitorIds.add(event.visitorId);
+        if (event.type === 'CLICK' && event.label) {
+          clicks[event.label] = (clicks[event.label] || 0) + 1;
         }
-      },
-      { $sort: { count: -1 } },
-      { $limit: 10 }
-    ]);
+      });
 
-    res.json({ events, stats, topClicks });
-    
-  } catch (error) {
-    console.error('❌ Get analytics error:', error.message);
-    res.status(500).json({ error: error.message });
-  }
-};
+      // 4. Récupérer l'existant pour cette date
+      const existing = await AnalyticsDaily.findOne({ date: dateString });
+      
+      let finalPageViews = pageViews;
+      let finalClicks = { ...clicks };
+      let finalVisitorIds = new Set(visitorIds);
 
+      if (existing) {
+        finalPageViews += existing.pageViews;
+        
+        if (existing.clicks) {
+          existing.clicks.forEach((count, label) => {
+            finalClicks[label] = (finalClicks[label] || 0) + count;
+          });
+        }
+        
+        (existing.visitorIds || []).forEach(id => finalVisitorIds.add(id));
+      }
 
-exports.aggregateDaily = async (req, res) => {
-  try {
-    const { date } = req.query; // Format: "2026-02-03" (optionnel)
-    
-    const targetDate = date ? new Date(date) : null;
-    const result = await aggregateDailyStats(targetDate);
-    
-    res.json({ 
-      success: true, 
-      result 
-    });
-  } catch (error) {
-    console.error('❌ Aggregate error:', error.message);
-    res.status(500).json({ error: error.message });
-  }
-};
+      // 5. Sauvegarder dans la table agrégée
+      await AnalyticsDaily.findOneAndUpdate(
+        { date: dateString },
+        {
+          pageViews: finalPageViews,
+          clicks: finalClicks,
+          uniqueVisitors: finalVisitorIds.size,
+          visitorIds: Array.from(finalVisitorIds)
+        },
+        { upsert: true, new: true }
+      );
 
-exports.getDailyStats = async (req, res) => {
-  try {
-    await connectToDatabase();
-    
-    const { startDate, endDate, limit = 30 } = req.query;
-    
-    const filter = {};
-    if (startDate || endDate) {
-      filter.date = {};
-      if (startDate) filter.date.$gte = startDate;
-      if (endDate) filter.date.$lte = endDate;
-    }
-    
-    const stats = await AnalyticsDaily
-      .find(filter)
-      .sort({ date: -1 })
-      .limit(parseInt(limit));
-    
-    res.json(stats);
-  } catch (error) {
-    console.error('❌ Get daily stats error:', error.message);
-    res.status(500).json({ error: error.message });
-  }
-};
+      results.push({
+        date: dateString,
+        eventsProcessed: dayEvents.length,
+        pageViews: finalPageViews,
+        uniqueVisitors: finalVisitorIds.size
+      });
 
-exports.cronAggregateDaily = async (req, res) => {
-  try {
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (!cronSecret) {
-      console.error('❌ CRON_SECRET not configured');
-      return res.status(500).json({ error: 'Cron not configured' });
+      console.log(`✅ Aggregated ${dayEvents.length} events for ${dateString}`);
     }
 
-    // Le secret est passé en query param par Vercel
-    if (req.query.secret !== cronSecret) {
-      console.error('❌ Invalid cron secret');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    // 6. SUPPRESSION de TOUS les événements bruts
+    const deleteResult = await Analytics.deleteMany({});
 
-    console.log('✅ Cron triggered successfully at', new Date().toISOString());
+    console.log(`✅ Total: ${events.length} events aggregated and DELETED from ${results.length} different days`);
 
-    await connectToDatabase();
+    return {
+      eventsProcessed: events.length,
+      deletedCount: deleteResult.deletedCount,
+      daysAggregated: results.length,
+      details: results,
+      message: 'Aggregation completed successfully'
+    };
 
-    const targetDate = req.query.date || null;
-    const result = await aggregateDailyStats(targetDate);
-
-    console.log('✅ Aggregation result:', result);
-
-    res.status(200).json({
-      success: true,
-      result,
-      message: 'Cron aggregation completed'
-    });
   } catch (error) {
-    console.error('❌ Cron aggregate error:', error);
-    res.status(500).json({ 
-      error: 'Aggregation failed', 
-      details: error.message 
-    });
+    console.error('❌ Aggregation error:', error);
+    throw error;
   }
-};
+}
+
+module.exports = { aggregateDailyStats };
