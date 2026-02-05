@@ -8,7 +8,7 @@ async function aggregateDailyStats(targetDate) {
       date = new Date(targetDate);
     } else {
       date = new Date();
-      date.setDate(date.getDate() - 1);
+      date.setDate(date.getDate());
     }
 
     date.setHours(0, 0, 0, 0);
