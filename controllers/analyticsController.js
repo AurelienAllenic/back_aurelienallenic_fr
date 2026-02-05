@@ -142,8 +142,6 @@ exports.getDailyStats = async (req, res) => {
 
 exports.cronAggregateDaily = async (req, res) => {
   try {
-    // Vérifier le secret Vercel (peut être dans query params pour GET)
-    const authHeader = req.headers.authorization;
     const cronSecret = process.env.CRON_SECRET;
 
     if (!cronSecret) {
@@ -151,18 +149,18 @@ exports.cronAggregateDaily = async (req, res) => {
       return res.status(500).json({ error: 'Cron not configured' });
     }
 
-    // Support pour Authorization header OU query param
-    const providedSecret = authHeader?.replace('Bearer ', '') || req.query.secret;
-
-    if (providedSecret !== cronSecret) {
+    // Le secret est passé en query param par Vercel
+    if (req.query.secret !== cronSecret) {
       console.error('❌ Invalid cron secret');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    console.log('✅ Cron triggered successfully');
+    console.log('✅ Cron triggered successfully at', new Date().toISOString());
 
     const targetDate = req.query.date || null;
     const result = await aggregateDailyStats(targetDate);
+
+    console.log('✅ Aggregation result:', result);
 
     res.status(200).json({
       success: true,
