@@ -100,7 +100,7 @@ exports.getAnalytics = async (req, res) => {
 
 exports.aggregateDaily = async (req, res) => {
   try {
-    const { date } = req.query; // Format: "2026-02-03" (optionnel)
+    const { date } = req.body; // Format: "2026-02-03" (optionnel)
     
     const targetDate = date ? new Date(date) : null;
     const result = await aggregateDailyStats(targetDate);
