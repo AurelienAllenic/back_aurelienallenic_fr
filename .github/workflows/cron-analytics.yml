@@ -2,7 +2,7 @@ name: Daily Analytics Aggregation
 
 on:
   schedule:
-    - cron: '35 20 * * *'  # 22h59 UTC = 23h59 Paris (hiver)
+    - cron: '39 20 * * *'  # 22h59 UTC = 23h59 Paris (hiver)
   workflow_dispatch:  # Permet de lancer manuellement pour tester
 
 jobs:
@@ -11,4 +11,4 @@ jobs:
     steps:
       - name: Call aggregation endpoint
         run: |
-          curl -X GET "https://ton-site-vercel.vercel.app/analytics/cron-aggregate?secret=${{ secrets.CRON_SECRET }}"
+          curl -X GET "${{ secrets.BACKEND_URL }}/analytics/cron-aggregate?secret=${{ secrets.CRON_SECRET }}"
