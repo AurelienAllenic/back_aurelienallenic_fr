@@ -139,3 +139,38 @@ exports.getDailyStats = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+exports.cronAggregateDaily = async (req, res) => {
+  try {
+    // Vérifier le secret Vercel
+    const authHeader = req.headers.authorization;
+    const cronSecret = process.env.CRON_SECRET;
+
+    if (!cronSecret) {
+      console.error('❌ CRON_SECRET not configured');
+      return res.status(500).json({ error: 'Cron not configured' });
+    }
+
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      console.error('❌ Invalid cron secret');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    console.log('✅ Cron triggered successfully');
+
+    const targetDate = req.query.date || null;
+    const result = await aggregateDailyStats(targetDate);
+
+    res.status(200).json({
+      success: true,
+      result,
+      message: 'Cron aggregation completed'
+    });
+  } catch (error) {
+    console.error('❌ Cron aggregate error:', error);
+    res.status(500).json({ 
+      error: 'Aggregation failed', 
+      details: error.message 
+    });
+  }
+};

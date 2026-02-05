@@ -2,8 +2,8 @@
   "version": 2,
   "crons": [
     {
-      "path": "/api/analytics/aggregate",
-      "schedule": "52 18 * * *"
+      "path": "/api/analytics/cron-aggregate",
+      "schedule": "59 18 * * *"
     }
   ],
   "builds": [
