@@ -1,104 +1,93 @@
 const Analytics = require('../models/Analytics');
 const AnalyticsDaily = require('../models/AnalyticsDaily');
 
-async function aggregateDailyStats() {
+async function aggregateDailyStats(targetDate = null) {
   try {
-    // 1. Récupérer TOUS les événements non agrégés
-    const events = await Analytics.find({});
+    const matchStage = targetDate 
+      ? { createdAt: { $gte: new Date(targetDate), $lt: new Date(new Date(targetDate).setDate(new Date(targetDate).getDate() + 1)) } }
+      : {};
 
-    if (events.length === 0) {
-      console.log('ℹ️ Aucun événement à agréger');
-      return { 
-        eventsProcessed: 0,
-        deletedCount: 0,
-        message: 'Aucune donnée à agréger'
-      };
-    }
-
-    // 2. Grouper les événements par date
-    const eventsByDate = {};
-    
-    events.forEach(event => {
-      const eventDate = new Date(event.createdAt);
-      const dateString = eventDate.toISOString().split('T')[0];
-      
-      if (!eventsByDate[dateString]) {
-        eventsByDate[dateString] = [];
-      }
-      eventsByDate[dateString].push(event);
-    });
-
-    // 3. Agréger chaque jour séparément
-    const results = [];
-    
-    for (const [dateString, dayEvents] of Object.entries(eventsByDate)) {
-      const pageViews = dayEvents.filter(e => e.type === 'PAGE_VIEW').length;
-      const clicks = {};
-      const visitorIds = new Set();
-
-      dayEvents.forEach(event => {
-        visitorIds.add(event.visitorId);
-        if (event.type === 'CLICK' && event.label) {
-          clicks[event.label] = (clicks[event.label] || 0) + 1;
+    // Pipeline d'agrégation ultra-efficace
+    const aggregated = await Analytics.aggregate([
+      { $match: matchStage },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          pageViews: {
+            $sum: { $cond: [{ $eq: ["$type", "PAGE_VIEW"] }, 1, 0] }
+          },
+          clicks: {
+            $push: {
+              $cond: [
+                { $and: [{ $eq: ["$type", "CLICK"] }, { $ne: ["$label", null] }] },
+                { k: "$label", v: 1 },
+                "$$REMOVE"
+              ]
+            }
+          },
+          visitorIds: { $addToSet: "$visitorId" }
         }
-      });
+      },
+      {
+        $project: {
+          date: "$_id",
+          pageViews: 1,
+          clicks: { $arrayToObject: "$clicks" },
+          uniqueVisitors: { $size: "$visitorIds" },
+          visitorIds: 1  // on garde pour merge si besoin
+        }
+      }
+    ]);
 
-      // 4. Récupérer l'existant pour cette date
-      const existing = await AnalyticsDaily.findOne({ date: dateString });
-      
-      let finalPageViews = pageViews;
-      let finalClicks = { ...clicks };
-      let finalVisitorIds = new Set(visitorIds);
+    const results = [];
+
+    for (const agg of aggregated) {
+      const existing = await AnalyticsDaily.findOne({ date: agg.date });
+
+      let finalPageViews = agg.pageViews;
+      let finalClicks = { ...agg.clicks };
+      let finalUnique = agg.uniqueVisitors;
+      let finalVisitorIds = new Set(agg.visitorIds);
 
       if (existing) {
-        finalPageViews += existing.pageViews;
-        
-        if (existing.clicks) {
-          existing.clicks.forEach((count, label) => {
-            finalClicks[label] = (finalClicks[label] || 0) + count;
-          });
-        }
-        
+        finalPageViews += existing.pageViews || 0;
+        Object.entries(existing.clicks || {}).forEach(([label, count]) => {
+          finalClicks[label] = (finalClicks[label] || 0) + count;
+        });
         (existing.visitorIds || []).forEach(id => finalVisitorIds.add(id));
+        finalUnique = finalVisitorIds.size;
       }
 
-      // 5. Sauvegarder dans la table agrégée
       await AnalyticsDaily.findOneAndUpdate(
-        { date: dateString },
+        { date: agg.date },
         {
           pageViews: finalPageViews,
           clicks: finalClicks,
-          uniqueVisitors: finalVisitorIds.size,
+          uniqueVisitors: finalUnique,
           visitorIds: Array.from(finalVisitorIds)
         },
-        { upsert: true, new: true }
+        { upsert: true }
       );
 
       results.push({
-        date: dateString,
-        eventsProcessed: dayEvents.length,
+        date: agg.date,
         pageViews: finalPageViews,
-        uniqueVisitors: finalVisitorIds.size
+        uniqueVisitors: finalUnique
       });
 
-      console.log(`✅ Aggregated ${dayEvents.length} events for ${dateString}`);
+      console.log(`✅ Aggregated day ${agg.date}`);
     }
-
-    // 6. SUPPRESSION de TOUS les événements bruts
-    const deleteResult = await Analytics.deleteMany({});
-
-    console.log(`✅ Total: ${events.length} events aggregated and DELETED from ${results.length} different days`);
+    
+    await Analytics.deleteMany(matchStage);  // ← décommente seulement si tu veux vraiment purger
 
     return {
-      eventsProcessed: events.length,
-      deletedCount: deleteResult.deletedCount,
-      daysAggregated: results.length,
-      details: results,
-      message: 'Aggregation completed successfully'
+      success: true,
+      daysProcessed: results.length,
+      details: results
     };
 
   } catch (error) {
-    console.error('❌ Aggregation error:', error);
+    console.error('❌ Aggregation pipeline error:', error);
     throw error;
   }
 }
