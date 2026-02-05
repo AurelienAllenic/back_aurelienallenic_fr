@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/analytics/cron-aggregate",
-       "schedule": "06 20 * * * Europe/Paris"
+       "schedule": "7 20 * * * Europe/Paris"
     }
   ],
   "builds": [
