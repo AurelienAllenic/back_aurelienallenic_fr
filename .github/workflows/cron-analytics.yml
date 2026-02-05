@@ -1,0 +1,14 @@
+name: Daily Analytics Aggregation
+
+on:
+  schedule:
+    - cron: '35 20 * * *'  # 22h59 UTC = 23h59 Paris (hiver)
+  workflow_dispatch:  # Permet de lancer manuellement pour tester
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call aggregation endpoint
+        run: |
+          curl -X GET "https://ton-site-vercel.vercel.app/analytics/cron-aggregate?secret=${{ secrets.CRON_SECRET }}"

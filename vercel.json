@@ -1,11 +1,5 @@
 {
   "version": 2,
-  "crons": [
-    {
-      "path": "/analytics/cron-aggregate?secret=${CRON_SECRET}",
-       "schedule": "27 19 * * *"
-    }
-  ],
   "builds": [
     {
       "src": "index.js",
