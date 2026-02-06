@@ -1,5 +1,7 @@
 const Analytics = require('../models/Analytics');
 const AnalyticsDaily = require('../models/AnalyticsDaily');
+const AnalyticsMonthly = require('../models/AnalyticsMonthly');
+const AnalyticsYearly = require('../models/AnalyticsYearly');
 
 async function aggregateDailyStats() {
   try {
@@ -103,4 +105,138 @@ async function aggregateDailyStats() {
   }
 }
 
-module.exports = { aggregateDailyStats };
+async function aggregateMonthlyStats(year, month) {
+  try {
+    const monthString = String(month).padStart(2, '0'); // "02"
+    const prefix = `${year}-${monthString}-`; // "2026-02-"
+
+    const days = await AnalyticsDaily.find({
+      date: { $regex: `^${prefix}` },
+    });
+
+    if (days.length === 0) {
+      console.log(`ℹ️ Aucun AnalyticsDaily pour ${year}-${monthString}`);
+      return {
+        year,
+        month,
+        daysCount: 0,
+        message: 'Aucune donnée quotidienne pour ce mois',
+      };
+    }
+
+    let pageViews = 0;
+    const clicks = {};
+    const visitorIdsSet = new Set();
+
+    for (const day of days) {
+      pageViews += day.pageViews || 0;
+
+      if (day.clicks) {
+        // day.clicks est un Map Mongoose
+        day.clicks.forEach((count, label) => {
+          clicks[label] = (clicks[label] || 0) + count;
+        });
+      }
+
+      (day.visitorIds || []).forEach((id) => visitorIdsSet.add(id));
+    }
+
+    const uniqueVisitors = visitorIdsSet.size;
+    const visitorIds = Array.from(visitorIdsSet);
+
+    const doc = await AnalyticsMonthly.findOneAndUpdate(
+      { year, month },
+      {
+        pageViews,
+        clicks,
+        uniqueVisitors,
+        visitorIds,
+      },
+      { upsert: true, new: true }
+    );
+
+    console.log(
+      `✅ Agrégation mensuelle ${year}-${monthString} : ${days.length} jours, ${pageViews} vues, ${uniqueVisitors} visiteurs uniques`
+    );
+
+    return {
+      year,
+      month,
+      daysCount: days.length,
+      pageViews,
+      uniqueVisitors,
+      doc,
+    };
+  } catch (error) {
+    console.error('❌ Erreur agrégation mensuelle :', error);
+    throw error;
+  }
+}
+
+
+async function aggregateYearlyStats(year) {
+  try {
+    const months = await AnalyticsMonthly.find({ year });
+
+    if (months.length === 0) {
+      console.log(`ℹ️ Aucun AnalyticsMonthly pour ${year}`);
+      return {
+        year,
+        monthsCount: 0,
+        message: 'Aucune donnée mensuelle pour cette année',
+      };
+    }
+
+    let pageViews = 0;
+    const clicks = {};
+    const visitorIdsSet = new Set();
+
+    for (const m of months) {
+      pageViews += m.pageViews || 0;
+
+      if (m.clicks) {
+        m.clicks.forEach((count, label) => {
+          clicks[label] = (clicks[label] || 0) + count;
+        });
+      }
+
+      (m.visitorIds || []).forEach((id) => visitorIdsSet.add(id));
+    }
+
+    const uniqueVisitors = visitorIdsSet.size;
+    const visitorIds = Array.from(visitorIdsSet);
+
+    const doc = await AnalyticsYearly.findOneAndUpdate(
+      { year },
+      {
+        pageViews,
+        clicks,
+        uniqueVisitors,
+        visitorIds,
+      },
+      { upsert: true, new: true }
+    );
+
+    console.log(
+      `✅ Agrégation annuelle ${year} : ${months.length} mois, ${pageViews} vues, ${uniqueVisitors} visiteurs uniques`
+    );
+
+    return {
+      year,
+      monthsCount: months.length,
+      pageViews,
+      uniqueVisitors,
+      doc,
+    };
+  } catch (error) {
+    console.error('❌ Erreur agrégation annuelle :', error);
+    throw error;
+  }
+}
+
+
+module.exports = {
+  aggregateDailyStats,
+  aggregateMonthlyStats,
+  aggregateYearlyStats,
+};

@@ -1,7 +1,11 @@
 const Analytics = require('../models/Analytics');
 const crypto = require('crypto');
 const { connectToDatabase } = require('../utils/mongodb');
-const { aggregateDailyStats } = require('../utils/aggregateAnalytics');
+const { 
+  aggregateDailyStats,
+  aggregateMonthlyStats,
+  aggregateYearlyStats,
+} = require('../utils/aggregateAnalytics');
 const AnalyticsDaily = require('../models/AnalyticsDaily');
 
 exports.trackEvent = async (req, res) => {
@@ -174,6 +178,101 @@ exports.cronAggregateDaily = async (req, res) => {
     res.status(500).json({ 
       error: 'Aggregation failed', 
       details: error.message 
+    });
+  }
+};
+
+exports.cronAggregateMonthly = async (req, res) => {
+  try {
+    const cronSecret = process.env.CRON_SECRET;
+
+    if (!cronSecret) {
+      console.error('❌ CRON_SECRET not configured');
+      return res.status(500).json({ error: 'Cron not configured' });
+    }
+
+    if (req.query.secret !== cronSecret) {
+      console.error('❌ Invalid cron secret (monthly)');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    console.log('✅ Cron monthly triggered at', new Date().toISOString());
+
+    await connectToDatabase();
+
+    // Si year/month sont passés en query, on les utilise, sinon on prend le mois précédent
+    let year = req.query.year ? parseInt(req.query.year, 10) : null;
+    let month = req.query.month ? parseInt(req.query.month, 10) : null; // 1-12
+
+    if (!year || !month) {
+      const d = new Date();
+      d.setUTCMonth(d.getUTCMonth() - 1); // mois précédent
+      year = d.getUTCFullYear();
+      month = d.getUTCMonth() + 1;       // getUTCMonth() = 0-11
+    }
+
+    const result = await aggregateMonthlyStats(year, month);
+
+    console.log('✅ Monthly aggregation result:', result);
+
+    res.status(200).json({
+      success: true,
+      scope: 'monthly',
+      year,
+      month,
+      result,
+      message: 'Cron monthly aggregation completed',
+    });
+  } catch (error) {
+    console.error('❌ Cron monthly aggregate error:', error);
+    res.status(500).json({
+      error: 'Monthly aggregation failed',
+      details: error.message,
+    });
+  }
+};
+
+exports.cronAggregateYearly = async (req, res) => {
+  try {
+    const cronSecret = process.env.CRON_SECRET;
+
+    if (!cronSecret) {
+      console.error('❌ CRON_SECRET not configured');
+      return res.status(500).json({ error: 'Cron not configured' });
+    }
+
+    if (req.query.secret !== cronSecret) {
+      console.error('❌ Invalid cron secret (yearly)');
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    console.log('✅ Cron yearly triggered at', new Date().toISOString());
+
+    await connectToDatabase();
+
+    // Si year est passé en query, on l'utilise, sinon on prend l'année précédente
+    let year = req.query.year ? parseInt(req.query.year, 10) : null;
+    if (!year) {
+      const d = new Date();
+      year = d.getUTCFullYear() - 1;
+    }
+
+    const result = await aggregateYearlyStats(year);
+
+    console.log('✅ Yearly aggregation result:', result);
+
+    res.status(200).json({
+      success: true,
+      scope: 'yearly',
+      year,
+      result,
+      message: 'Cron yearly aggregation completed',
+    });
+  } catch (error) {
+    console.error('❌ Cron yearly aggregate error:', error);
+    res.status(500).json({
+      error: 'Yearly aggregation failed',
+      details: error.message,
     });
   }
 };
