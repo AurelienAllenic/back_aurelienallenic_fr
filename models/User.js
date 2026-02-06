@@ -40,10 +40,9 @@ const UserAurelienSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-UserAurelienSchema .pre("save", async function (next) {
-  if (!this.isModified("password") || !this.password) return next();
+UserAurelienSchema .pre("save", async function () {
+  if (!this.isModified("password") || !this.password) return;
   this.password = await bcrypt.hash(this.password, 10);
-  next();
 });
 
 UserAurelienSchema .methods.comparePassword = async function (password) {
