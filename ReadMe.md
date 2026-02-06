@@ -65,6 +65,10 @@ index.js      point d'entrée
 vercel.json   déploiement Vercel
 ```
 
+## Schéma de base de données
+
+![Schéma BDD](https://res.cloudinary.com/dwpbyyhoq/image/upload/f_auto,q_auto/db-schema_mm0qfe.webp)
+
 ## API
 
 - **GET /** — Health / message de bienvenue
