@@ -103,6 +103,16 @@ Pour afficher les logs (console) pendant les tests : `TEST_VERBOSE=1 npm test` (
 
 Aucune configuration externe (MongoDB, Brevo, Cloudinary) n’est nécessaire pour exécuter les tests.
 
+### Tests sur GitHub Actions
+
+Un workflow **GitHub Actions** lance automatiquement les tests à chaque push et à chaque pull request sur les branches `main` et `master`.
+
+- **Fichier** : `.github/workflows/tests.yml`
+- **Déclencheurs** : `push` et `pull_request` sur `main` / `master`
+- **Étapes** : checkout → Node.js 20 (avec cache npm) → `npm ci` → `npm test`
+
+Les tests s'exécutent sur un runner Ubuntu ; MongoDB Memory Server est utilisé en mémoire, aucune base externe n'est requise. Pour consulter les résultats : onglet **Actions** du dépôt GitHub, puis la dernière exécution du workflow « Tests ».
+
 ## Schéma de base de données
 
 ![Schéma BDD](https://res.cloudinary.com/dwpbyyhoq/image/upload/f_auto,q_auto/db-schema_mm0qfe.webp)
