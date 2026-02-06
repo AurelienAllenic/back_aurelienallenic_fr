@@ -65,6 +65,44 @@ index.js      point d'entrée
 vercel.json   déploiement Vercel
 ```
 
+## Tests
+
+Les tests utilisent **Jest**, **supertest** et **MongoDB Memory Server** (base en mémoire, pas de MongoDB à lancer).
+
+### Lancer les tests
+
+```bash
+npm test
+```
+
+Mode watch (relance à chaque modification) :
+
+```bash
+npm run test:watch
+```
+
+Pour afficher les logs (console) pendant les tests : `TEST_VERBOSE=1 npm test` (sous Windows : `set TEST_VERBOSE=1` puis `npm test`).
+
+### Organisation
+
+- **`tests/setup.js`** — Démarrage MongoDB Memory Server, connexion DB, variables de test (`MESSAGE_ENCRYPTION_KEY`, `NODE_ENV=test`), mocks console pour une sortie propre.
+- **`tests/smoke.test.js`** — Vérification que l’app répond (health).
+- **`tests/unit/`** — Modèles (User, Message, Cv) : création, champs, requêtes.
+- **`tests/integration/`** — Routes HTTP avec app de test (`tests/helpers/testApp.js`) :
+  - **authRoutes.test.js** — Login, logout, check, create-user.
+  - **cvRoutes.test.js** — GET/PUT/DELETE `/cv` (multer mocké, pas d’upload Cloudinary).
+  - **messageRoutes.test.js** — GET liste, GET par id, DELETE (auth requise).
+  - **analyticsRoutes.test.js** — POST `/track`, agrégation, GET daily/monthly/yearly, crons (CRON_SECRET en test).
+  - **contactRoutes.test.js** — POST `/contact` (Brevo mocké, aucun email envoyé).
+
+### Mocks
+
+- **Brevo** — Dans les tests contact, `@getbrevo/brevo` est mocké : `sendTransacEmail` résout sans appel réseau.
+- **Multer / Cloudinary** — Dans les tests CV, le middleware d’upload est remplacé par un no-op ; pas d’appel à Cloudinary.
+- **Console** — En test, `console.log`, `warn`, `info` et `error` sont mockés (sauf si `TEST_VERBOSE=1`).
+
+Aucune configuration externe (MongoDB, Brevo, Cloudinary) n’est nécessaire pour exécuter les tests.
+
 ## Schéma de base de données
 
 ![Schéma BDD](https://res.cloudinary.com/dwpbyyhoq/image/upload/f_auto,q_auto/db-schema_mm0qfe.webp)
