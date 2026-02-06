@@ -4,6 +4,7 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const passport = require("passport");
 const authRoutes = require("../../routes/authRoutes");
+const appRoutes = require("../../routes/routes");
 
 require("../../config/passport");
 
@@ -26,6 +27,7 @@ function createTestApp() {
   app.use(passport.initialize());
   app.use(passport.session());
   app.use("/auth", authRoutes);
+  app.use("/", appRoutes);
   return app;
 }
 
