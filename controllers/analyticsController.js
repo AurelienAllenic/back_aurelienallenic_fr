@@ -7,6 +7,9 @@ const {
   aggregateYearlyStats,
 } = require('../utils/aggregateAnalytics');
 const AnalyticsDaily = require('../models/AnalyticsDaily');
+const AnalyticsMonthly = require('../models/AnalyticsMonthly');
+const AnalyticsYearly = require('../models/AnalyticsYearly');
+
 
 exports.trackEvent = async (req, res) => {
   try {
@@ -144,6 +147,54 @@ exports.getDailyStats = async (req, res) => {
   }
 };
 
+exports.getMonthlyStats = async (req, res) => {
+  try {
+    await connectToDatabase();
+
+    const { year, month } = req.query;
+
+    if (!year) {
+      return res.status(400).json({ error: 'year est requis' });
+    }
+
+    const filter = { year: parseInt(year, 10) };
+    if (month) {
+      filter.month = parseInt(month, 10);
+    }
+
+    const stats = await AnalyticsMonthly
+      .find(filter)
+      .sort({ year: -1, month: -1 });
+
+    res.json(stats);
+  } catch (error) {
+    console.error('❌ Get monthly stats error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getYearlyStats = async (req, res) => {
+  try {
+    await connectToDatabase();
+
+    const { year } = req.query;
+
+    const filter = {};
+    if (year) {
+      filter.year = parseInt(year, 10);
+    }
+
+    const stats = await AnalyticsYearly
+      .find(filter)
+      .sort({ year: -1 });
+
+    res.json(stats);
+  } catch (error) {
+    console.error('❌ Get yearly stats error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 exports.cronAggregateDaily = async (req, res) => {
   try {
     const cronSecret = process.env.CRON_SECRET;
@@ -276,3 +327,4 @@ exports.cronAggregateYearly = async (req, res) => {
     });
   }
 };
+
