@@ -11,6 +11,7 @@
   "jest": {
   "testEnvironment": "node",
   "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+  "globalTeardown": "<rootDir>/tests/teardown.js",
   "testMatch": ["**/tests/**/*.test.js"]
   },
   "keywords": [],
