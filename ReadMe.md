@@ -115,7 +115,7 @@ Les tests s'exécutent sur un runner Ubuntu ; MongoDB Memory Server est utilisé
 
 ## Schéma de base de données
 
-![Schéma BDD](https://res.cloudinary.com/dwpbyyhoq/image/upload/f_auto,q_auto/db-schema_mm0qfe.webp)
+![Schéma BDD](https://res.cloudinary.com/dwpbyyhoq/image/upload/f_auto,q_auto/portolio-bdd_vysivv.webp)
 
 ## API
 
