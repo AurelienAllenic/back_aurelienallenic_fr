@@ -110,6 +110,7 @@ async function aggregateMonthlyStats(year, month) {
     const monthString = String(month).padStart(2, '0'); // "02"
     const prefix = `${year}-${monthString}-`; // "2026-02-"
 
+    // 1. Récupérer TOUS les jours du mois
     const days = await AnalyticsDaily.find({
       date: { $regex: `^${prefix}` },
     });
@@ -120,10 +121,12 @@ async function aggregateMonthlyStats(year, month) {
         year,
         month,
         daysCount: 0,
+        deletedDays: 0,
         message: 'Aucune donnée quotidienne pour ce mois',
       };
     }
 
+    // 2. Agréger les données
     let pageViews = 0;
     const clicks = {};
     const visitorIdsSet = new Set();
@@ -144,6 +147,7 @@ async function aggregateMonthlyStats(year, month) {
     const uniqueVisitors = visitorIdsSet.size;
     const visitorIds = Array.from(visitorIdsSet);
 
+    // 3. Sauvegarder dans AnalyticsMonthly
     const doc = await AnalyticsMonthly.findOneAndUpdate(
       { year, month },
       {
@@ -155,9 +159,15 @@ async function aggregateMonthlyStats(year, month) {
       { upsert: true, new: true }
     );
 
+    // 4. SUPPRESSION de TOUS les jours agrégés
+    const deleteResult = await AnalyticsDaily.deleteMany({
+      date: { $regex: `^${prefix}` },
+    });
+
     console.log(
       `✅ Agrégation mensuelle ${year}-${monthString} : ${days.length} jours, ${pageViews} vues, ${uniqueVisitors} visiteurs uniques`
     );
+    console.log(`✅ ${deleteResult.deletedCount} jours supprimés de AnalyticsDaily`);
 
     return {
       year,
@@ -165,6 +175,7 @@ async function aggregateMonthlyStats(year, month) {
       daysCount: days.length,
       pageViews,
       uniqueVisitors,
+      deletedDays: deleteResult.deletedCount,
       doc,
     };
   } catch (error) {
@@ -176,6 +187,7 @@ async function aggregateMonthlyStats(year, month) {
 
 async function aggregateYearlyStats(year) {
   try {
+    // 1. Récupérer TOUS les mois de l'année
     const months = await AnalyticsMonthly.find({ year });
 
     if (months.length === 0) {
@@ -183,10 +195,12 @@ async function aggregateYearlyStats(year) {
       return {
         year,
         monthsCount: 0,
+        deletedMonths: 0,
         message: 'Aucune donnée mensuelle pour cette année',
       };
     }
 
+    // 2. Agréger les données
     let pageViews = 0;
     const clicks = {};
     const visitorIdsSet = new Set();
@@ -206,6 +220,7 @@ async function aggregateYearlyStats(year) {
     const uniqueVisitors = visitorIdsSet.size;
     const visitorIds = Array.from(visitorIdsSet);
 
+    // 3. Sauvegarder dans AnalyticsYearly
     const doc = await AnalyticsYearly.findOneAndUpdate(
       { year },
       {
@@ -217,15 +232,20 @@ async function aggregateYearlyStats(year) {
       { upsert: true, new: true }
     );
 
+    // 4. SUPPRESSION de TOUS les mois agrégés
+    const deleteResult = await AnalyticsMonthly.deleteMany({ year });
+
     console.log(
       `✅ Agrégation annuelle ${year} : ${months.length} mois, ${pageViews} vues, ${uniqueVisitors} visiteurs uniques`
     );
+    console.log(`✅ ${deleteResult.deletedCount} mois supprimés de AnalyticsMonthly`);
 
     return {
       year,
       monthsCount: months.length,
       pageViews,
       uniqueVisitors,
+      deletedMonths: deleteResult.deletedCount,
       doc,
     };
   } catch (error) {
