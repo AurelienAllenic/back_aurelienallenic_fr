@@ -13,7 +13,7 @@ apiInstance.setApiKey(
  * Gère l'envoi d'emails depuis le formulaire de contact
  */
 exports.handleContact = async (req, res) => {
-  const { email, message, captchaToken } = req.body;
+  const { email, message, "g-recaptcha-response": captchaToken } = req.body;
 
   const siteName = process.env.SITE_NAME || 'Site';
   const senderEmail = process.env.SENDER_EMAIL || 'contact@example.com';
