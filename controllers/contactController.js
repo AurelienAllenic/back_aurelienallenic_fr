@@ -1,6 +1,7 @@
 const brevo = require('@getbrevo/brevo');
 const getMessageModel = require('../models/Message');
 const { encrypt } = require('../utils/encryption');
+const { verifyRecaptcha } = require('../utils/recaptcha');
 
 const apiInstance = new brevo.TransactionalEmailsApi();
 apiInstance.setApiKey(
@@ -12,12 +13,13 @@ apiInstance.setApiKey(
  * Gère l'envoi d'emails depuis le formulaire de contact
  */
 exports.handleContact = async (req, res) => {
-  const { email, message } = req.body;
+  const { email, message, captchaToken } = req.body;
 
   const siteName = process.env.SITE_NAME || 'Site';
   const senderEmail = process.env.SENDER_EMAIL || 'contact@example.com';
   const adminEmail = process.env.ADMIN_EMAIL || process.env.SENDER_EMAIL || 'contact@example.com';
   const siteUrl = process.env.SITE_URL || process.env.FRONTEND_URL || 'https://example.com';
+  const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY;
 
   if (!email || !message) {
     return res.status(400).json({
@@ -32,6 +34,22 @@ exports.handleContact = async (req, res) => {
       success: false,
       error: "Format d'email invalide",
     });
+  }
+
+  if (recaptchaSecret) {
+    if (!captchaToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'Vérification de sécurité requise. Veuillez accepter les cookies et réessayer.',
+      });
+    }
+    const verification = await verifyRecaptcha(captchaToken, recaptchaSecret, 'contact', 0.5);
+    if (!verification.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Vérification de sécurité échouée. Veuillez réessayer.',
+      });
+    }
   }
 
   try {

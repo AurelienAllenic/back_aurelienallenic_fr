@@ -44,6 +44,7 @@ Créer un fichier `.env` à la racine (voir section Variables d'environnement).
 | CLOUDINARY_API_KEY | Clé API Cloudinary |
 | CLOUDINARY_API_SECRET | Secret API Cloudinary |
 | CLOUDINARY_CV_FOLDER | (Optionnel) Dossier Cloudinary pour les CV (défaut: cv) |
+| RECAPTCHA_SECRET_KEY | (Optionnel) Clé secrète reCAPTCHA v3 pour le formulaire de contact. Si définie, le front doit envoyer un token `captchaToken` (clé site = `VITE_RECAPTCHA_SITE_KEY` côté front). |
 
 ## Lancement
 
