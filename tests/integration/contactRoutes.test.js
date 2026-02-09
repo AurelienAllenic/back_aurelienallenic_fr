@@ -56,7 +56,19 @@ jest.mock("@getbrevo/brevo", () => {
         expect(res.body.success).toBe(false);
         expect(res.body.error).toMatch(/invalide/i);
       });
-  
+
+      it("retourne 400 si reCAPTCHA configuré mais captchaToken absent", async () => {
+        const orig = process.env.RECAPTCHA_SECRET_KEY;
+        process.env.RECAPTCHA_SECRET_KEY = "test-secret";
+        const res = await request(createTestApp())
+          .post("/contact")
+          .send({ email: "a@b.com", message: "Message" });
+        process.env.RECAPTCHA_SECRET_KEY = orig;
+        expect(res.status).toBe(400);
+        expect(res.body.success).toBe(false);
+        expect(res.body.error).toMatch(/sécurité|requise|cookies/i);
+      });
+
       it("retourne 200 et message de succès sans envoyer vraiment sur Brevo", async () => {
         const res = await request(createTestApp())
           .post("/contact")
