@@ -6,7 +6,7 @@ const MonthlyStatSubSchema = new mongoose.Schema({
   clicks: { type: Map, of: Number, default: {} },
   uniqueVisitors: { type: Number, default: 0 },
   visitorIds: { type: [String], default: [] },
-  dailyStats: [{ // Nested des dailyStats
+  dailyStats: [{
     date: { type: String, required: true },
     pageViews: { type: Number, default: 0 },
     clicks: { type: Map, of: Number, default: {} },

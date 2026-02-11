@@ -2,15 +2,12 @@ const getMessageModel = require("../models/Message");
 const mongoose = require("mongoose");
 const { decrypt } = require("../utils/encryption");
 
-// Récupérer tous les messages
+
 exports.findAllMessages = async (req, res) => {
   try {
     const Message = await getMessageModel();
     const messages = await Message.find().sort({ createdAt: -1 });
     
-    console.log(`📨 [Messages] Récupération de ${messages.length} message(s)`);
-    
-    // Déchiffrer les messages pour l'affichage
     const decryptedMessages = messages.map((msg, index) => {
       try {
         const originalEmail = msg.email;
@@ -18,15 +15,12 @@ exports.findAllMessages = async (req, res) => {
         
         const decryptedEmail = decrypt(msg.email);
         const decryptedMessage = decrypt(msg.message);
-        
-        // Vérifier si le déchiffrement a réussi
+
         if (decryptedEmail === originalEmail) {
           console.warn(`⚠️ [Messages] Email non déchiffré pour message ${index + 1} (ID: ${msg._id})`);
         }
         if (decryptedMessage === originalMessage) {
           console.warn(`⚠️ [Messages] Message non déchiffré pour message ${index + 1} (ID: ${msg._id})`);
-        } else {
-          console.log(`✅ [Messages] Message ${index + 1} déchiffré avec succès`);
         }
         
         return {
@@ -54,7 +48,7 @@ exports.findAllMessages = async (req, res) => {
   }
 };
 
-// Récupérer un message par ID
+
 exports.findOneMessage = async (req, res) => {
   const { id } = req.params;
 
@@ -69,7 +63,6 @@ exports.findOneMessage = async (req, res) => {
       return res.status(404).json({ message: "Message non trouvé." });
     }
 
-    // Déchiffrer le message pour l'affichage
     const decryptedMessage = {
       ...message.toObject(),
       email: decrypt(message.email),
@@ -86,7 +79,7 @@ exports.findOneMessage = async (req, res) => {
   }
 };
 
-// Supprimer un message
+
 exports.deleteMessage = async (req, res) => {
   const { id } = req.params;
 

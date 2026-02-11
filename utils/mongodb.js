@@ -1,17 +1,13 @@
-// utils/mongodb.js
 const mongoose = require('mongoose');
 
 let cachedConnection = null;
 
 async function connectToDatabase() {
   if (cachedConnection && mongoose.connection.readyState === 1) {
-    console.log('♻️ Using cached MongoDB connection');
     return cachedConnection;
   }
 
   try {
-    console.log('🔌 Connecting to MongoDB...');
-    
     const opts = {
       bufferCommands: false,
       serverSelectionTimeoutMS: 5000,
@@ -21,7 +17,6 @@ async function connectToDatabase() {
     const conn = await mongoose.connect(process.env.MONGO_SECRET_KEY, opts);
     
     cachedConnection = conn;
-    console.log('✅ MongoDB connected');
     return conn;
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);

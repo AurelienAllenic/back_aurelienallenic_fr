@@ -7,14 +7,12 @@ const { loginLimiter } = require("../middlewares/rateLimiter");
 require("../config/passport");
 
 router.post("/login", loginLimiter, authController.login);
-
 router.get(
   "/google",
   passport.authenticate("google", {
     scope: ["profile", "email"],
   })
 );
-
 router.get(
   "/google/callback",
   passport.authenticate("google", {
@@ -25,11 +23,8 @@ router.get(
   }),
   authController.googleCallback
 );
-
 router.post("/logout", authController.logout);
-
 router.get("/check", authController.checkSession);
-
 router.post(
   "/create-user",
   authController.requireAuth,

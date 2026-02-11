@@ -2,7 +2,6 @@ const { MongoMemoryServer } = require("mongodb-memory-server");
 const path = require("path");
 
 module.exports = async () => {
-  // Utiliser les mocks Jest pour que la section "● Console" reste vide
   if (process.env.TEST_VERBOSE !== "1") {
     jest.spyOn(console, "log").mockImplementation(() => {});
     jest.spyOn(console, "warn").mockImplementation(() => {});

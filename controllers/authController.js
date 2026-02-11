@@ -2,15 +2,9 @@ const getUserModel = require("../models/User");
 const { connectDB } = require("../config/db");
 const bcrypt = require("bcryptjs");
 
-// --- CONNEXION EMAIL/PASSWORD ---
+
 exports.login = async (req, res) => {
   const { email, password } = req.body;
-
-  console.log("🔐 [Login] Tentative de connexion:", {
-    email: email,
-    emailNormalized: email?.toLowerCase().trim(),
-    hasPassword: !!password,
-  });
 
   try {
     await connectDB();
@@ -21,36 +15,21 @@ exports.login = async (req, res) => {
       email: emailNormalized,
     });
 
-    console.log("🔍 [Login] Recherche utilisateur:", {
-      emailRecherche: emailNormalized,
-      userTrouve: !!user,
-      userId: user?._id,
-      userEmail: user?.email,
-      userAuthMethod: user?.authMethod,
-      hasPassword: !!user?.password,
-    });
-
     if (!user) {
       return res.status(401).json({ error: "Email ou mot de passe incorrect." });
     }
 
     if (!user.password) {
-      console.log("❌ [Login] User trouvé mais pas de password");
       return res.status(401).json({ error: "Ce compte utilise la connexion Google." });
     }
 
     if (user.authMethod === "google" && user.password) {
-      console.log("🔄 [Login] Mise à jour authMethod de \"google\" à \"email\"");
       user.authMethod = "email";
       await user.save();
     }
 
     const passwordTrimmed = password.trim();
     const valid = await bcrypt.compare(passwordTrimmed, user.password);
-    console.log("🔐 [Login] Vérification mot de passe:", {
-      valid: valid,
-      passwordLength: passwordTrimmed.length,
-    });
 
     if (!valid) {
       return res.status(401).json({ error: "Email ou mot de passe incorrect." });
@@ -61,25 +40,16 @@ exports.login = async (req, res) => {
     req.session.userName = user.name || user.email;
     req.session.userPicture = user.picture;
 
-    console.log("🔐 [Login] Session créée:", {
-      userId: req.session.userId,
-      email: req.session.userEmail,
-      sessionID: req.sessionID,
-    });
-
     await new Promise((resolve, reject) => {
       req.session.save((err) => {
         if (err) {
-          console.error("❌ Erreur lors de la sauvegarde de la session :", err);
           return reject(err);
         }
-        console.log("✅ [Login] Session sauvegardée");
         resolve();
       });
     });
 
     const setCookieHeader = res.getHeader("Set-Cookie");
-    console.log("🍪 [Login] Set-Cookie header:", setCookieHeader || "AUCUN");
 
     res.status(200).json({
       message: "Connexion réussie.",
@@ -96,21 +66,12 @@ exports.login = async (req, res) => {
   }
 };
 
-// --- CALLBACK OAUTH GOOGLE ---
+
 exports.googleCallback = async (req, res) => {
   try {
-    console.log("🔵 [Google OAuth] Callback reçu");
     const profile = req.user;
 
-    console.log("🔵 [Google OAuth] Profile:", {
-      hasProfile: !!profile,
-      hasEmails: !!profile?.emails,
-      email: profile?.emails?.[0]?.value,
-      googleId: profile?.id,
-    });
-
     if (!profile || !profile.emails || !profile.emails[0]) {
-      console.log("❌ [Google OAuth] Pas d'email dans le profile");
       return res.redirect(
         `${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=no_email`
       );
@@ -118,34 +79,17 @@ exports.googleCallback = async (req, res) => {
 
     await connectDB();
     const User = await getUserModel();
-
     const email = profile.emails[0].value.toLowerCase().trim();
     const googleId = profile.id;
     const name = profile.displayName || profile.name?.givenName || email;
     const picture =
       profile.photos && profile.photos[0] ? profile.photos[0].value : null;
 
-    console.log("🔵 [Google OAuth] Recherche utilisateur:", {
-      email: email,
-      googleId: googleId,
-    });
-
     let user = await User.findOne({
       $or: [{ email: email }, { googleId: googleId }],
     });
 
-    console.log("🔵 [Google OAuth] Résultat recherche:", {
-      userTrouve: !!user,
-      userId: user?._id,
-      userEmail: user?.email,
-      userGoogleId: user?.googleId,
-      userAuthMethod: user?.authMethod,
-    });
-
     if (!user) {
-      console.log(
-        `❌ [Google OAuth] Tentative de connexion Google avec un compte inexistant: ${email}`
-      );
       const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
       return res.redirect(`${frontendUrl}/login?error=account_not_found`);
     }
@@ -169,7 +113,6 @@ exports.googleCallback = async (req, res) => {
     }
 
     if (updated) {
-      console.log("🔄 [Google OAuth] Mise à jour utilisateur");
       await user.save();
     }
 
@@ -178,19 +121,11 @@ exports.googleCallback = async (req, res) => {
     req.session.userName = user.name || user.email;
     req.session.userPicture = user.picture;
 
-    console.log("🔐 [Google OAuth] Session créée:", {
-      userId: req.session.userId,
-      email: req.session.userEmail,
-      sessionID: req.sessionID,
-    });
-
     await new Promise((resolve, reject) => {
       req.session.save((err) => {
         if (err) {
-          console.error("❌ [Google OAuth] Erreur lors de la sauvegarde de la session :", err);
           return reject(err);
         }
-        console.log("✅ [Google OAuth] Session sauvegardée");
         resolve();
       });
     });
@@ -199,18 +134,15 @@ exports.googleCallback = async (req, res) => {
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const redirectUrl = `${frontendUrl}/dashboard?success=logged_in`;
-    console.log("🔄 [Google OAuth] Redirection vers:", redirectUrl);
-    console.log("🍪 [Google OAuth] Session ID à envoyer:", req.sessionID);
 
     res.redirect(redirectUrl);
   } catch (error) {
-    console.error("❌ [Google OAuth] Erreur lors du callback Google :", error);
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     res.redirect(`${frontendUrl}/login?error=server_error`);
   }
 };
 
-// --- DÉCONNEXION ---
+
 exports.logout = (req, res) => {
   if (req.session) {
     delete req.session.userId;
@@ -221,27 +153,16 @@ exports.logout = (req, res) => {
 
   req.session.save((err) => {
     if (err) {
-      console.error("Erreur lors de la déconnexion :", err);
       return res.status(500).json({ message: "Erreur lors de la déconnexion." });
     }
-
     res.status(200).json({ message: "Déconnexion réussie." });
   });
 };
 
-// --- VÉRIFICATION DE SESSION ---
+
 exports.checkSession = (req, res) => {
-  console.log("🔍 [Check] Vérification session:", {
-    hasSession: !!req.session,
-    sessionID: req.sessionID,
-    userId: req.session?.userId,
-    site: req.session?.site,
-    cookies: req.headers.cookie || "AUCUN COOKIE",
-    origin: req.headers.origin,
-  });
 
   if (req.session && req.session.userId) {
-    console.log("✅ [Check] Session valide");
     return res.status(200).json({
       isAuthenticated: true,
       user: {
@@ -252,12 +173,10 @@ exports.checkSession = (req, res) => {
       },
     });
   }
-
-  console.log("❌ [Check] Session invalide ou absente");
   res.status(200).json({ isAuthenticated: false });
 };
 
-// --- MIDDLEWARE DE PROTECTION DES ROUTES ---
+
 exports.requireAuth = (req, res, next) => {
   if (!req.session.userId) {
     return res.status(401).json({ message: "Non authentifié." });
@@ -265,7 +184,7 @@ exports.requireAuth = (req, res, next) => {
   next();
 };
 
-// --- MIDDLEWARE ADMIN ---
+
 exports.requireAdmin = async (req, res, next) => {
   try {
     if (!req.session.userId) {
@@ -287,7 +206,6 @@ exports.requireAdmin = async (req, res, next) => {
   }
 };
 
-// --- CRÉATION DE COMPTE (ADMIN UNIQUEMENT) ---
 exports.createUser = async (req, res) => {
   const { email, password, name, authMethod, role } = req.body;
 

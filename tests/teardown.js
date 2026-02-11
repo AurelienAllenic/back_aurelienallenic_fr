@@ -1,5 +1,5 @@
 /**
- * Ferme les connexions MongoDB et arrête le Memory Server pour que Jest puisse quitter proprement.
+ * Close MongoDB connections and stop the Memory Server for Jest to exit cleanly.
  */
 module.exports = async () => {
   try {
@@ -16,7 +16,6 @@ module.exports = async () => {
       await mongoose.connection.close();
     }
   } catch (_) {
-    // Ignorer si déjà fermé ou module non chargé
   }
 
   try {
@@ -24,6 +23,5 @@ module.exports = async () => {
       await global.__MONGO_INSTANCE__.stop();
     }
   } catch (_) {
-    // Ignorer si déjà arrêté
   }
 };

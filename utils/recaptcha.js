@@ -1,16 +1,16 @@
 /**
- * Vérification reCAPTCHA v3 côté serveur.
+ * Verify reCAPTCHA v3 server side.
  * @see https://developers.google.com/recaptcha/docs/v3
  */
 
 const RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify';
 
 /**
- * Vérifie un token reCAPTCHA v3 auprès de Google.
- * @param {string} token - Token renvoyé par le front (grecaptcha.execute).
- * @param {string} secretKey - Clé secrète reCAPTCHA (RECAPTCHA_SECRET_KEY).
- * @param {string} [expectedAction] - Action attendue (ex: "contact"). Si fournie, la réponse doit correspondre.
- * @param {number} [minScore=0.5] - Score minimum (0–1). En dessous, considéré comme bot.
+ * Verify a reCAPTCHA v3 token with Google.
+ * @param {string} token - Token returned by the front (grecaptcha.execute).
+ * @param {string} secretKey - reCAPTCHA secret key (RECAPTCHA_SECRET_KEY).
+ * @param {string} [expectedAction] - Expected action (ex: "contact"). If provided, the response must match.
+ * @param {number} [minScore=0.5] - Minimum score (0–1). Below this, considered as bot.
  * @returns {Promise<{ success: boolean, score?: number, action?: string, error?: string }>}
  */
 async function verifyRecaptcha(token, secretKey, expectedAction = null, minScore = 0.5) {

@@ -24,11 +24,9 @@ const getMessageModel = async () => {
   let connection = getConnection();
 
   if (!connection || connection.readyState !== 1) {
-    console.log("🔄 [Message] Connexion non prête, tentative de connexion...");
     connection = await connectDB();
 
     if (connection && connection.readyState === 2) {
-      console.log("🔄 [Message] Connexion en cours, attente jusqu'à 6 secondes...");
       await new Promise((resolve) => {
         let attempts = 0;
         const maxAttempts = 60;
@@ -38,13 +36,9 @@ const getMessageModel = async () => {
           const state = connection.readyState;
 
           if (state === 1) {
-            console.log("✅ [Message] Connexion établie après attente");
             clearInterval(checkConnection);
             resolve();
           } else if (state === 0 || attempts >= maxAttempts) {
-            console.log(
-              `⚠️ [Message] Connexion non établie (état: ${state}, tentatives: ${attempts})`
-            );
             clearInterval(checkConnection);
             resolve();
           }
@@ -55,13 +49,11 @@ const getMessageModel = async () => {
 
   if (connection && connection.readyState === 1) {
     if (connection.models.Message) {
-      console.log("📦 [Message] Utilisation du modèle existant");
       return connection.models.Message;
     }
     const schema = new mongoose.Schema(messageSchemaDefinition, {
       timestamps: true,
     });
-    console.log("📦 [Message] Création du modèle");
     return connection.model("Message", schema);
   }
 

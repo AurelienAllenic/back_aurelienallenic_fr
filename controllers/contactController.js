@@ -9,9 +9,7 @@ apiInstance.setApiKey(
   process.env.BREVO_API_KEY
 );
 
-/**
- * Gère l'envoi d'emails depuis le formulaire de contact
- */
+
 exports.handleContact = async (req, res) => {
   const { email, message, "g-recaptcha-response": captchaToken } = req.body;
 
@@ -139,7 +137,6 @@ exports.handleContact = async (req, res) => {
     };
 
     await apiInstance.sendTransacEmail(adminEmailPayload);
-    console.log(`✅ Email admin envoyé depuis ${email}`);
 
     const confirmationEmail = {
       sender: {
@@ -227,7 +224,6 @@ exports.handleContact = async (req, res) => {
     };
 
     await apiInstance.sendTransacEmail(confirmationEmail);
-    console.log(`✅ Email confirmation envoyé à ${email}`);
 
     res.status(200).json({
       success: true,
@@ -253,7 +249,6 @@ exports.handleContact = async (req, res) => {
             messageDoc.save(),
             new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout sauvegarde')), 3000)),
           ]);
-          console.log(`✅ [Message] Message chiffré créé en BDD (ID: ${messageDoc._id})`);
         }
       } catch (error) {
         console.error('❌ [Message] Erreur création message:', error.message);

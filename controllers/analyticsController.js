@@ -14,9 +14,6 @@ const AnalyticsYearly = require('../models/AnalyticsYearly');
 exports.trackEvent = async (req, res) => {
   try {
     await connectToDatabase();
-    
-    console.log('📊 Tracking event received:', req.body);
-    
     const { type, path, label, metadata } = req.body;
 
     if (!type) {
@@ -43,12 +40,8 @@ exports.trackEvent = async (req, res) => {
       label: label || null,
       metadata: metadata || {}
     });
-
     await newEvent.save();
-    
-    console.log('✅ Event saved successfully');
     res.status(200).json({ status: 'ok' });
-    
   } catch (error) {
     console.error('❌ Analytics error:', error.message);
     res.status(500).json({ error: error.message });
@@ -58,7 +51,6 @@ exports.trackEvent = async (req, res) => {
 exports.getAnalytics = async (req, res) => {
   try {
     await connectToDatabase();
-    
     const { type, limit = 100 } = req.query;
     const filter = type ? { type } : {};
     
@@ -107,8 +99,7 @@ exports.getAnalytics = async (req, res) => {
 
 exports.aggregateDaily = async (req, res) => {
   try {
-    const { date } = req.query; // Format: "2026-02-03" (optionnel)
-    
+    const { date } = req.query; // Format: "2026-02-03"
     const targetDate = date ? new Date(date) : null;
     const result = await aggregateDailyStats(targetDate);
     
@@ -125,7 +116,6 @@ exports.aggregateDaily = async (req, res) => {
 exports.getDailyStats = async (req, res) => {
   try {
     await connectToDatabase();
-    
     const { startDate, endDate, limit = 30 } = req.query;
     
     const filter = {};
@@ -150,7 +140,6 @@ exports.getDailyStats = async (req, res) => {
 exports.getMonthlyStats = async (req, res) => {
   try {
     await connectToDatabase();
-
     const { year, month } = req.query;
 
     if (!year) {
@@ -176,7 +165,6 @@ exports.getMonthlyStats = async (req, res) => {
 exports.getYearlyStats = async (req, res) => {
   try {
     await connectToDatabase();
-
     const { year } = req.query;
 
     const filter = {};
@@ -204,20 +192,14 @@ exports.cronAggregateDaily = async (req, res) => {
       return res.status(500).json({ error: 'Cron not configured' });
     }
 
-    // Le secret est passé en query param par Vercel
     if (req.query.secret !== cronSecret) {
       console.error('❌ Invalid cron secret');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    console.log('✅ Cron triggered successfully at', new Date().toISOString());
-
     await connectToDatabase();
-
     const targetDate = req.query.date || null;
     const result = await aggregateDailyStats(targetDate);
-
-    console.log('✅ Aggregation result:', result);
 
     res.status(200).json({
       success: true,
@@ -247,24 +229,19 @@ exports.cronAggregateMonthly = async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    console.log('✅ Cron monthly triggered at', new Date().toISOString());
-
     await connectToDatabase();
 
-    // Si year/month sont passés en query, on les utilise, sinon on prend le mois précédent
     let year = req.query.year ? parseInt(req.query.year, 10) : null;
-    let month = req.query.month ? parseInt(req.query.month, 10) : null; // 1-12
+    let month = req.query.month ? parseInt(req.query.month, 10) : null;
 
     if (!year || !month) {
       const d = new Date();
-      d.setUTCMonth(d.getUTCMonth() - 1); // mois précédent
+      d.setUTCMonth(d.getUTCMonth() - 1); // previous month
       year = d.getUTCFullYear();
-      month = d.getUTCMonth() + 1;       // getUTCMonth() = 0-11
+      month = d.getUTCMonth() + 1;
     }
 
     const result = await aggregateMonthlyStats(year, month);
-
-    console.log('✅ Monthly aggregation result:', result);
 
     res.status(200).json({
       success: true,
@@ -297,11 +274,8 @@ exports.cronAggregateYearly = async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    console.log('✅ Cron yearly triggered at', new Date().toISOString());
-
     await connectToDatabase();
 
-    // Si year est passé en query, on l'utilise, sinon on prend l'année précédente
     let year = req.query.year ? parseInt(req.query.year, 10) : null;
     if (!year) {
       const d = new Date();
@@ -309,8 +283,6 @@ exports.cronAggregateYearly = async (req, res) => {
     }
 
     const result = await aggregateYearlyStats(year);
-
-    console.log('✅ Yearly aggregation result:', result);
 
     res.status(200).json({
       success: true,
@@ -327,4 +299,3 @@ exports.cronAggregateYearly = async (req, res) => {
     });
   }
 };
-

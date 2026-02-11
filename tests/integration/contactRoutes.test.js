@@ -1,5 +1,5 @@
 /**
- * Tests POST /contact. Brevo est mocké : aucun email n'est vraiment envoyé.
+ * Tests POST /contact. Brevo is mocked: no email is actually sent.
  */
 jest.mock("@getbrevo/brevo", () => {
     const mockSend = jest.fn().mockResolvedValue({ body: { messageId: "test-id" } });

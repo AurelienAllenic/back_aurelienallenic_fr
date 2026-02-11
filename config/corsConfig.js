@@ -5,7 +5,7 @@ const allowedOrigins = [
   "https://www.aurelienallenic.fr",
 ];
 
-// En développement, ajouter localhost
+// Only for dev
 if (process.env.NODE_ENV !== "production") {
   allowedOrigins.push("http://localhost:5173");
   allowedOrigins.push("http://127.0.0.1:5173");
@@ -13,12 +13,10 @@ if (process.env.NODE_ENV !== "production") {
   allowedOrigins.push("http://127.0.0.1:3000");
 }
 
-console.log("🌍 [CORS] Origines autorisées :", allowedOrigins);
-console.log("🌍 [CORS] NODE_ENV :", process.env.NODE_ENV || "undefined");
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Autoriser si origin est undefined (requêtes serveur-à-serveur, Postman)
+    // Allow if origin is undefined (server-to-server requests, Postman)
     if (!origin) {
       return callback(null, true);
     }

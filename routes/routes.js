@@ -7,11 +7,13 @@ const { uploadCvFields } = require("../middlewares/multer");
 const messageController = require("../controllers/messageController")
 const analyticsController = require("../controllers/analyticsController");
 
+// Contact
 router.post("/contact", contactController.handleContact);
 router.get("/messages", authController.requireAuth, messageController.findAllMessages);
 router.get("/messages/:id", authController.requireAuth, messageController.findOneMessage);
 router.delete("/messages/:id", authController.requireAuth, messageController.deleteMessage)
 
+// Resume 
 router.get("/cv", cvController.getCv);
 router.put(
   "/cv",
@@ -30,6 +32,7 @@ router.get('/analytics/daily', authController.requireAuth, analyticsController.g
 router.get('/analytics/monthly', authController.requireAuth, analyticsController.getMonthlyStats);
 router.get('/analytics/yearly', authController.requireAuth, analyticsController.getYearlyStats);
 
+// Cron jobs
 router.get('/analytics/cron-aggregate', analyticsController.cronAggregateDaily);
 router.get('/analytics/cron-aggregate-monthly', analyticsController.cronAggregateMonthly);
 router.get('/analytics/cron-aggregate-yearly', analyticsController.cronAggregateYearly);

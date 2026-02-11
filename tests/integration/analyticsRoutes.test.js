@@ -8,12 +8,12 @@ const AnalyticsYearly = require("../../models/AnalyticsYearly");
 const { connectDB, getConnection } = require("../../config/db");
 const { connectToDatabase } = require("../../utils/mongodb");
 
-// Déclarer adminEmail AVANT la fonction qui l'utilise
+
 const adminEmail = "admin@analytics.test";
 
 const loginAsAdmin = async () => {
   const User = await getUserModel();
-  await User.deleteOne({ email: adminEmail }); // ← évite E11000
+  await User.deleteOne({ email: adminEmail });
   await User.create({
     email: adminEmail,
     password: "admin",
@@ -45,25 +45,21 @@ describe("Analytics routes", () => {
     it("renvoie dailyStats imbriqués quand il y a des données (mois précédent)", async () => {
       const agent = await loginAsAdmin();
 
-      // Créer un daily (aujourd’hui → février 2026)
       await request(createTestApp()).post("/track").send({ type: "PAGE_VIEW" });
       await request(createTestApp()).post("/track").send({ type: "CLICK", label: "test" });
       await agent.post("/analytics/aggregate"); // daily
 
-      // ← TA MÉTHODE MANUELLE : on déplace le daily vers janvier 2026
       const dailyDoc = await AnalyticsDaily.findOne({ date: { $regex: "^2026-02-" } });
       if (dailyDoc) {
         dailyDoc.date = "2026-01-15";
         await dailyDoc.save();
       }
 
-      // Agrégation monthly sur janvier 2026
       const cronRes = await agent.get(
         "/analytics/cron-aggregate-monthly?secret=test-cron-secret&year=2026&month=1"
       );
       expect(cronRes.status).toBe(200);
 
-      // Vérification
       const monthlyRes = await agent.get("/analytics/monthly?year=2026");
       expect(monthlyRes.status).toBe(200);
 
@@ -72,7 +68,6 @@ describe("Analytics routes", () => {
       expect(Array.isArray(month.dailyStats)).toBe(true);
       expect(month.dailyStats.length).toBeGreaterThan(0);
 
-      // Cohérence totaux
       const sumViews = month.dailyStats.reduce((s, d) => s + (d.pageViews || 0), 0);
       expect(month.pageViews).toBe(sumViews);
     });

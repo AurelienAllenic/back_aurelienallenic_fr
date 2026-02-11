@@ -3,13 +3,12 @@ const AnalyticsDaily = require('../models/AnalyticsDaily');
 const AnalyticsMonthly = require('../models/AnalyticsMonthly');
 const AnalyticsYearly = require('../models/AnalyticsYearly');
 
+
 async function aggregateDailyStats() {
   try {
-    // 1. Récupérer TOUS les événements non agrégés
     const events = await Analytics.find({});
 
     if (events.length === 0) {
-      console.log('ℹ️ Aucun événement à agréger');
       return { 
         eventsProcessed: 0,
         deletedCount: 0,
@@ -17,7 +16,6 @@ async function aggregateDailyStats() {
       };
     }
 
-    // 2. Grouper les événements par date
     const eventsByDate = {};
     
     events.forEach(event => {
@@ -30,7 +28,6 @@ async function aggregateDailyStats() {
       eventsByDate[dateString].push(event);
     });
 
-    // 3. Agréger chaque jour séparément
     const results = [];
     
     for (const [dateString, dayEvents] of Object.entries(eventsByDate)) {
@@ -45,7 +42,6 @@ async function aggregateDailyStats() {
         }
       });
 
-      // 4. Récupérer l'existant pour cette date
       const existing = await AnalyticsDaily.findOne({ date: dateString });
       
       let finalPageViews = pageViews;
@@ -64,7 +60,6 @@ async function aggregateDailyStats() {
         (existing.visitorIds || []).forEach(id => finalVisitorIds.add(id));
       }
 
-      // 5. Sauvegarder dans la table agrégée
       await AnalyticsDaily.findOneAndUpdate(
         { date: dateString },
         {
@@ -82,14 +77,9 @@ async function aggregateDailyStats() {
         pageViews: finalPageViews,
         uniqueVisitors: finalVisitorIds.size
       });
-
-      console.log(`✅ Aggregated ${dayEvents.length} events for ${dateString}`);
     }
 
-    // 6. SUPPRESSION de TOUS les événements bruts
     const deleteResult = await Analytics.deleteMany({});
-
-    console.log(`✅ Total: ${events.length} events aggregated and DELETED from ${results.length} different days`);
 
     return {
       eventsProcessed: events.length,
@@ -105,28 +95,26 @@ async function aggregateDailyStats() {
   }
 }
 
+
 async function aggregateMonthlyStats(year, month) {
   try {
     const monthString = String(month).padStart(2, '0');
     const prefix = `${year}-${monthString}-`;
 
-    // Récupérer tous les jours du mois
     const days = await AnalyticsDaily.find({ date: { $regex: `^${prefix}` } }).sort({ date: 1 });
 
     if (days.length === 0) {
       return { year, month, daysCount: 0, deletedDays: 0, message: 'Aucune donnée quotidienne' };
     }
 
-    // Préparer les dailyStats nested (copie des days, mais en format subdoc)
     const dailyStats = days.map(day => ({
       date: day.date,
       pageViews: day.pageViews,
-      clicks: day.clicks, // Map se copie bien
+      clicks: day.clicks,
       uniqueVisitors: day.uniqueVisitors,
       visitorIds: day.visitorIds
     }));
 
-    // Calculer les totaux mensuels
     let pageViews = 0;
     const clicks = {};
     const visitorIdsSet = new Set();
@@ -144,7 +132,6 @@ async function aggregateMonthlyStats(year, month) {
     const uniqueVisitors = visitorIdsSet.size;
     const visitorIds = Array.from(visitorIdsSet);
 
-    // Upsert le monthly avec nested
     const doc = await AnalyticsMonthly.findOneAndUpdate(
       { year, month },
       {
@@ -152,12 +139,11 @@ async function aggregateMonthlyStats(year, month) {
         clicks,
         uniqueVisitors,
         visitorIds,
-        dailyStats // Nouveau : embarque les détails
+        dailyStats
       },
       { upsert: true, new: true }
     );
 
-    // Supprimer les days après embedding
     const deleteResult = await AnalyticsDaily.deleteMany({ date: { $regex: `^${prefix}` } });
 
     return { year, month, daysCount: days.length, pageViews, uniqueVisitors, deletedDays: deleteResult.deletedCount, doc };
@@ -170,24 +156,21 @@ async function aggregateMonthlyStats(year, month) {
 
 async function aggregateYearlyStats(year) {
   try {
-    // Récupérer tous les mois de l'année
     const months = await AnalyticsMonthly.find({ year }).sort({ month: 1 });
 
     if (months.length === 0) {
       return { year, monthsCount: 0, deletedMonths: 0, message: 'Aucune donnée mensuelle' };
     }
 
-    // Préparer les monthlyStats nested
     const monthlyStats = months.map(m => ({
       month: m.month,
       pageViews: m.pageViews,
       clicks: m.clicks,
       uniqueVisitors: m.uniqueVisitors,
       visitorIds: m.visitorIds,
-      dailyStats: m.dailyStats // Embarque les daily nested
+      dailyStats: m.dailyStats
     }));
 
-    // Calculer les totaux annuels
     let pageViews = 0;
     const clicks = {};
     const visitorIdsSet = new Set();
@@ -205,7 +188,6 @@ async function aggregateYearlyStats(year) {
     const uniqueVisitors = visitorIdsSet.size;
     const visitorIds = Array.from(visitorIdsSet);
 
-    // Upsert le yearly avec nested
     const doc = await AnalyticsYearly.findOneAndUpdate(
       { year },
       {
@@ -213,12 +195,11 @@ async function aggregateYearlyStats(year) {
         clicks,
         uniqueVisitors,
         visitorIds,
-        monthlyStats // Nouveau : embarque les détails
+        monthlyStats
       },
       { upsert: true, new: true }
     );
 
-    // Supprimer les months après embedding
     const deleteResult = await AnalyticsMonthly.deleteMany({ year });
 
     return { year, monthsCount: months.length, pageViews, uniqueVisitors, deletedMonths: deleteResult.deletedCount, doc };

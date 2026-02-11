@@ -13,7 +13,7 @@ const AnalyticsDailySchema = new mongoose.Schema({
   },
   clicks: {
     type: Map,
-    of: Number, // { "nav_linkedin": 15, "nav_github": 8, ... }
+    of: Number,
     default: {}
   },
   uniqueVisitors: {
