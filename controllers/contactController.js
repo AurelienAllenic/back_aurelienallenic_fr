@@ -1,13 +1,9 @@
-const brevo = require('@getbrevo/brevo');
+const { Resend } = require('resend');
 const getMessageModel = require('../models/Message');
 const { encrypt } = require('../utils/encryption');
 const { verifyRecaptcha } = require('../utils/recaptcha');
 
-const apiInstance = new brevo.TransactionalEmailsApi();
-apiInstance.setApiKey(
-  brevo.TransactionalEmailsApiApiKeys.apiKey,
-  process.env.BREVO_API_KEY
-);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 
 exports.handleContact = async (req, res) => {
@@ -51,15 +47,7 @@ exports.handleContact = async (req, res) => {
   }
 
   try {
-    const adminEmailPayload = {
-      sender: {
-        email: senderEmail,
-        name: `${siteName} - Formulaire de contact`,
-      },
-      to: [{ email: adminEmail }],
-      replyTo: { email: email },
-      subject: `[${siteName}] Nouveau message de contact`,
-      htmlContent: `
+    const adminHtml = `
     <!DOCTYPE html>
     <html lang="fr">
     <head>
@@ -133,19 +121,17 @@ exports.handleContact = async (req, res) => {
       </table>
     </body>
     </html>
-    `,
-    };
+    `;
 
-    await apiInstance.sendTransacEmail(adminEmailPayload);
+    await resend.emails.send({
+      from: `${siteName} - Formulaire de contact <${senderEmail}>`,
+      to: adminEmail,
+      reply_to: email,
+      subject: `[${siteName}] Nouveau message de contact`,
+      html: adminHtml,
+    });
 
-    const confirmationEmail = {
-      sender: {
-        email: senderEmail,
-        name: siteName,
-      },
-      to: [{ email: email }],
-      subject: 'Message bien reçu ! 🎨',
-      htmlContent: `
+    const confirmationHtml = `
       <!DOCTYPE html>
       <html lang="fr">
       <head>
@@ -220,10 +206,14 @@ exports.handleContact = async (req, res) => {
         </table>
       </body>
       </html>
-      `,
-    };
+      `;
 
-    await apiInstance.sendTransacEmail(confirmationEmail);
+    await resend.emails.send({
+      from: `${siteName} <${senderEmail}>`,
+      to: email,
+      subject: 'Message bien reçu ! 🎨',
+      html: confirmationHtml,
+    });
 
     res.status(200).json({
       success: true,
@@ -255,13 +245,9 @@ exports.handleContact = async (req, res) => {
       }
     })();
   } catch (error) {
-    console.error('❌ Erreur Brevo :', error);
+    console.error('❌ Erreur Resend :', error);
 
-    let errorMessage = error.message;
-    if (error.response) {
-      console.error('Détails:', error.response.body);
-      errorMessage = JSON.stringify(error.response.body);
-    }
+    let errorMessage = error.message || 'Erreur Resend';
 
     res.status(500).json({
       success: false,

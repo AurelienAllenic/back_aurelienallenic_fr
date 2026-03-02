@@ -1,16 +1,16 @@
 /**
- * Tests POST /contact. Brevo is mocked: no email is actually sent.
+ * Tests POST /contact. Resend is mocked: no email is actually sent.
  */
-jest.mock("@getbrevo/brevo", () => {
-    const mockSend = jest.fn().mockResolvedValue({ body: { messageId: "test-id" } });
-    return {
-      TransactionalEmailsApi: jest.fn().mockImplementation(() => ({
-        setApiKey: jest.fn(),
-        sendTransacEmail: mockSend,
-      })),
-      TransactionalEmailsApiApiKeys: { apiKey: "api-key" },
-    };
-  });
+jest.mock("resend", () => {
+  const mockSend = jest.fn().mockResolvedValue({ id: "test-id" });
+  return {
+    Resend: jest.fn().mockImplementation(() => ({
+      emails: {
+        send: mockSend,
+      },
+    })),
+  };
+});
   
   const request = require("supertest");
   const { createTestApp } = require("../helpers/testApp");
