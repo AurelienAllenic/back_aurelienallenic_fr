@@ -29,12 +29,13 @@ const connectDB = async () => {
             }
             
             connection = mongoose.createConnection(mongoUri, {
-                serverSelectionTimeoutMS: 8000, // ⚡ 8s max to avoid Vercel timeouts
+                serverSelectionTimeoutMS: 8000,
                 socketTimeoutMS: 10000,
                 connectTimeoutMS: 8000,
                 maxPoolSize: 5,
                 minPoolSize: 1,
                 maxIdleTimeMS: 30000,
+                bufferCommands: true,
             });
             await connection.asPromise();
             connectionPromise = null;

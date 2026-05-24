@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { getModelConnection } = require('../utils/getModelConnection');
 
 const MonthlyStatSubSchema = new mongoose.Schema({
   month: { type: Number, required: true },
@@ -11,8 +12,8 @@ const MonthlyStatSubSchema = new mongoose.Schema({
     pageViews: { type: Number, default: 0 },
     clicks: { type: Map, of: Number, default: {} },
     uniqueVisitors: { type: Number, default: 0 },
-    visitorIds: { type: [String], default: [] }
-  }]
+    visitorIds: { type: [String], default: [] },
+  }],
 }, { _id: false });
 
 const AnalyticsYearlySchema = new mongoose.Schema({
@@ -21,7 +22,17 @@ const AnalyticsYearlySchema = new mongoose.Schema({
   clicks: { type: Map, of: Number, default: {} },
   uniqueVisitors: { type: Number, default: 0 },
   visitorIds: { type: [String], default: [] },
-  monthlyStats: [MonthlyStatSubSchema]
+  monthlyStats: [MonthlyStatSubSchema],
 }, { timestamps: true });
 
-module.exports = mongoose.model('AnalyticsYearly', AnalyticsYearlySchema);
+const getAnalyticsYearlyModel = async () => {
+  const connection = await getModelConnection();
+
+  if (connection.models.AnalyticsYearly) {
+    return connection.models.AnalyticsYearly;
+  }
+
+  return connection.model('AnalyticsYearly', AnalyticsYearlySchema);
+};
+
+module.exports = getAnalyticsYearlyModel;

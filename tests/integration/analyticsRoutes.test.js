@@ -1,13 +1,11 @@
 const request = require("supertest");
 const { createTestApp } = require("../helpers/testApp");
 const getUserModel = require("../../models/User");
-const Analytics = require("../../models/Analytics");
-const AnalyticsDaily = require("../../models/AnalyticsDaily");
-const AnalyticsMonthly = require("../../models/AnalyticsMonthly");
-const AnalyticsYearly = require("../../models/AnalyticsYearly");
+const getAnalyticsModel = require("../../models/Analytics");
+const getAnalyticsDailyModel = require("../../models/AnalyticsDaily");
+const getAnalyticsMonthlyModel = require("../../models/AnalyticsMonthly");
+const getAnalyticsYearlyModel = require("../../models/AnalyticsYearly");
 const { connectDB, getConnection } = require("../../config/db");
-const { connectToDatabase } = require("../../utils/mongodb");
-
 
 const adminEmail = "admin@analytics.test";
 
@@ -28,11 +26,14 @@ const loginAsAdmin = async () => {
 describe("Analytics routes", () => {
   beforeAll(async () => {
     if (!getConnection() || getConnection().readyState !== 1) await connectDB();
-    await connectToDatabase();
     process.env.CRON_SECRET = process.env.CRON_SECRET || "test-cron-secret";
   }, 15000);
 
   afterEach(async () => {
+    const Analytics = await getAnalyticsModel();
+    const AnalyticsDaily = await getAnalyticsDailyModel();
+    const AnalyticsMonthly = await getAnalyticsMonthlyModel();
+    const AnalyticsYearly = await getAnalyticsYearlyModel();
     await Analytics.deleteMany({});
     await AnalyticsDaily.deleteMany({});
     await AnalyticsMonthly.deleteMany({});
@@ -41,14 +42,15 @@ describe("Analytics routes", () => {
     await User.deleteMany({ email: adminEmail });
   });
 
- describe("GET /analytics/monthly avec nested dailyStats", () => {
+  describe("GET /analytics/monthly avec nested dailyStats", () => {
     it("renvoie dailyStats imbriqués quand il y a des données (mois précédent)", async () => {
       const agent = await loginAsAdmin();
 
       await request(createTestApp()).post("/track").send({ type: "PAGE_VIEW" });
       await request(createTestApp()).post("/track").send({ type: "CLICK", label: "test" });
-      await agent.post("/analytics/aggregate"); // daily
+      await agent.post("/analytics/aggregate");
 
+      const AnalyticsDaily = await getAnalyticsDailyModel();
       const dailyDoc = await AnalyticsDaily.findOne({ date: { $regex: "^2026-02-" } });
       if (dailyDoc) {
         dailyDoc.date = "2026-01-15";
@@ -78,6 +80,7 @@ describe("Analytics routes", () => {
       await request(createTestApp()).post("/track").send({ type: "PAGE_VIEW" });
       await agent.post("/analytics/aggregate");
 
+      const AnalyticsDaily = await getAnalyticsDailyModel();
       const before = await AnalyticsDaily.countDocuments({ date: { $regex: "^2026-02-" } });
       expect(before).toBeGreaterThan(0);
 
