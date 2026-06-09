@@ -3,7 +3,7 @@ const getMessageModel = require('../models/Message');
 const { encrypt } = require('../utils/encryption');
 const { verifyRecaptcha } = require('../utils/recaptcha');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 
 exports.handleContact = async (req, res) => {
@@ -123,13 +123,15 @@ exports.handleContact = async (req, res) => {
     </html>
     `;
 
-    await resend.emails.send({
-      from: `${siteName} - Formulaire de contact <${senderEmail}>`,
-      to: adminEmail,
-      reply_to: email,
-      subject: `[${siteName}] Nouveau message de contact`,
-      html: adminHtml,
-    });
+    if (resend) {
+      await resend.emails.send({
+        from: `${siteName} - Formulaire de contact <${senderEmail}>`,
+        to: adminEmail,
+        reply_to: email,
+        subject: `[${siteName}] Nouveau message de contact`,
+        html: adminHtml,
+      });
+    }
 
     const confirmationHtml = `
       <!DOCTYPE html>
@@ -208,12 +210,14 @@ exports.handleContact = async (req, res) => {
       </html>
       `;
 
-    await resend.emails.send({
-      from: `${siteName} <${senderEmail}>`,
-      to: email,
-      subject: 'Message bien reçu ! 🎨',
-      html: confirmationHtml,
-    });
+    if (resend) {
+      await resend.emails.send({
+        from: `${siteName} <${senderEmail}>`,
+        to: email,
+        subject: 'Message bien reçu ! 🎨',
+        html: confirmationHtml,
+      });
+    }
 
     res.status(200).json({
       success: true,

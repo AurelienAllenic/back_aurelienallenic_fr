@@ -290,3 +290,85 @@ exports.cronAggregateYearly = async (req, res) => {
     });
   }
 };
+
+exports.getCandidaturesStats = async (req, res) => {
+  try {
+    const Analytics = await getAnalyticsModel();
+
+    const stats = await Analytics.aggregate([
+      {
+        $match: {
+          'metadata.candidature': { $exists: true, $ne: null, $ne: '' }
+        }
+      },
+      {
+        $group: {
+          _id: '$metadata.candidature',
+          pageViews: {
+            $sum: {
+              $cond: [{ $eq: ['$type', 'PAGE_VIEW'] }, 1, 0]
+            }
+          },
+          clickLabels: {
+            $push: {
+              $cond: [{ $eq: ['$type', 'CLICK'] }, '$label', '$$REMOVE']
+            }
+          },
+          uniqueVisitors: { $addToSet: '$visitorId' },
+          firstVisit: { $min: '$createdAt' },
+          lastVisit: { $max: '$createdAt' }
+        }
+      },
+      {
+        $sort: { pageViews: -1 }
+      }
+    ]);
+
+    const formattedStats = stats.map(stat => {
+      const clicks = {};
+      stat.clickLabels.forEach(label => {
+        if (label) {
+          clicks[label] = (clicks[label] || 0) + 1;
+        }
+      });
+
+      return {
+        candidature: stat._id,
+        pageViews: stat.pageViews,
+        clicks,
+        uniqueVisitors: stat.uniqueVisitors.length,
+        firstVisit: stat.firstVisit,
+        lastVisit: stat.lastVisit
+      };
+    });
+
+    res.json(formattedStats);
+  } catch (error) {
+    console.error('❌ Get candidatures stats error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.deleteCandidatureActions = async (req, res) => {
+  try {
+    const Analytics = await getAnalyticsModel();
+    const { candidature } = req.params;
+
+    if (!candidature) {
+      return res.status(400).json({ error: 'Candidature name is required' });
+    }
+
+    const result = await Analytics.deleteMany({
+      'metadata.candidature': candidature
+    });
+
+    res.json({
+      success: true,
+      deletedCount: result.deletedCount,
+      message: `${result.deletedCount} events deleted for candidature: ${candidature}`
+    });
+  } catch (error) {
+    console.error('❌ Delete candidature actions error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+};

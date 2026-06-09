@@ -28,9 +28,10 @@ router.delete("/cv", authController.requireAuth, cvController.deleteCv);
 router.post('/track', analyticsController.trackEvent);
 router.post('/analytics/aggregate', authController.requireAuth, analyticsController.aggregateDaily);
 router.get('/analytics/daily', authController.requireAuth, analyticsController.getDailyStats);
-
 router.get('/analytics/monthly', authController.requireAuth, analyticsController.getMonthlyStats);
 router.get('/analytics/yearly', authController.requireAuth, analyticsController.getYearlyStats);
+router.get('/analytics/candidatures', authController.requireAuth, analyticsController.getCandidaturesStats);
+router.delete('/analytics/candidatures/:candidature', authController.requireAuth, analyticsController.deleteCandidatureActions);
 
 // Cron jobs
 router.get('/analytics/cron-aggregate', analyticsController.cronAggregateDaily);
